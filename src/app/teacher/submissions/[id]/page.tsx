@@ -42,7 +42,7 @@ export default async function ReviewPage(props: PageProps<"/teacher/submissions/
           <div className="row" style={{ justifyContent: "space-between" }}>
             <div className="stack" style={{ gap: 4 }}>
               <p className="eyebrow">
-                {displayName(student as Profile)} · сдано {formatDate(sub.submitted_at)} · срок {formatDate(a.due_at)}
+                <Link href={`/teacher/students/${sub.student_id}`}>{displayName(student as Profile)}</Link> · сдано {formatDate(sub.submitted_at)} · срок {formatDate(a.due_at)}
               </p>
               <h1>{a.title}</h1>
             </div>

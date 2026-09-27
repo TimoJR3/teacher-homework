@@ -2,18 +2,26 @@ import Link from "next/link";
 import { createAssignment } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 import { displayName, formatDate } from "@/lib/format";
-import type { Assignment, Profile, Submission } from "@/lib/types";
+import { assignedCount, recipientsByAssignment } from "@/lib/assignments";
+import type { Assignment, AssignmentStudent, Profile, Submission } from "@/lib/types";
 import { ErrorBanner, Header, StatusPill } from "@/components/ui";
 
 export default async function TeacherHome(props: PageProps<"/teacher">) {
   const { error } = await props.searchParams;
   const { profile, supabase } = await requireRole("teacher");
 
-  const [{ data: assignments }, { data: submissions }, { data: students }] = await Promise.all([
+  const [{ data: assignments }, { data: submissions }, { data: students }, { data: recipientRows }] = await Promise.all([
     supabase.from("assignments").select("*").order("created_at", { ascending: false }),
     supabase.from("submissions").select("*").order("updated_at", { ascending: false }),
     supabase.from("profiles").select("id, email, full_name, role").eq("role", "student").order("full_name"),
+    supabase.from("assignment_students").select("assignment_id, student_id"),
   ]);
+  const recipients = recipientsByAssignment((recipientRows ?? []) as AssignmentStudent[]);
+  const forWhom = (id: string) => {
+    const list = recipients.get(id);
+    if (!list) return "всем";
+    return list.map((sid) => displayName(studentById.get(sid))).join(", ");
+  };
 
   const subs = (submissions ?? []) as Submission[];
   const assignmentById = new Map(((assignments ?? []) as Assignment[]).map((a) => [a.id, a]));
@@ -54,9 +62,12 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
                 <div className="li" key={a.id}>
                   <span>{a.title}</span>
                   <span className="muted small">
-                    сдали {subs.filter((s) => s.assignment_id === a.id).length} из {students?.length ?? 0}
+                    сдали {subs.filter((s) => s.assignment_id === a.id).length} из{" "}
+                    {assignedCount(recipients, a.id, students?.length ?? 0)}
                   </span>
-                  <small>срок: {formatDate(a.due_at)}</small>
+                  <small>
+                    срок: {formatDate(a.due_at)} · для: {forWhom(a.id)}
+                  </small>
                 </div>
               ))}
             </div>
@@ -68,7 +79,6 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
         <aside className="stack">
           <form action={createAssignment} className="panel">
             <h3>Новое задание</h3>
-            <p className="muted small">Задание увидят все ученики.</p>
             <label>
               Название
               <input type="text" name="title" id="assignment-title" required placeholder="Essay: My last holiday" />
@@ -81,6 +91,18 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
               Срок
               <input type="date" name="due" id="assignment-due" />
             </label>
+            {students?.length ? (
+              <fieldset className="choices">
+                <legend>Кому выдать</legend>
+                {(students as Profile[]).map((s) => (
+                  <label key={s.id} className="check">
+                    <input type="checkbox" name="student_ids" value={s.id} id={`assign-${s.id}`} />
+                    {displayName(s)}
+                  </label>
+                ))}
+                <small className="muted">Если никого не отметить, задание получат все ученики.</small>
+              </fieldset>
+            ) : null}
             <button className="btn primary" type="submit">
               Создать
             </button>
@@ -91,7 +113,9 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
             {students?.length ? (
               <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
                 {(students as Profile[]).map((s) => (
-                  <li key={s.id}>{displayName(s)}</li>
+                  <li key={s.id}>
+                    <Link href={`/teacher/students/${s.id}`}>{displayName(s)}</Link>
+                  </li>
                 ))}
               </ul>
             ) : (

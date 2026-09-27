@@ -1,71 +1,128 @@
--- Сценарий проверки прав: каждая строка после "EXPECT ERROR" должна завершиться ошибкой.
--- Запуск: см. README, раздел «Проверка прав в базе».
-\set ON_ERROR_STOP 0
-insert into auth.users values ('00000000-0000-0000-0000-00000000000a','t@x.ru','{"full_name":"Teacher"}'),
- ('00000000-0000-0000-0000-00000000000b','s@x.ru','{"full_name":"Аня"}'),
- ('00000000-0000-0000-0000-00000000000c','e@x.ru','{"full_name":"Другой"}');
-update public.profiles set role='teacher' where email='t@x.ru';
-select email, role, full_name from profiles order by email;
+-- Проверка прав доступа. Запускается после auth_stub.sql и всех миграций:
+--   psql -v ON_ERROR_STOP=1 -f supabase/tests/permissions.sql
+-- Любое неожиданное поведение останавливает скрипт с ошибкой.
 
--- student tries to become teacher
-set role authenticated; set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000b';
-\echo EXPECT ERROR: role change
-update profiles set role='teacher' where id=auth.uid();
-\echo EXPECT ERROR: student creates assignment
-insert into assignments(title) values ('hack');
+\set ON_ERROR_STOP 1
+\set teacher '00000000-0000-0000-0000-00000000000a'
+\set anya '00000000-0000-0000-0000-00000000000b'
+\set max '00000000-0000-0000-0000-00000000000c'
 
--- teacher creates assignment
-reset role; set role authenticated; set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000a';
-insert into assignments(id,title) values ('10000000-0000-0000-0000-000000000001','Essay');
-\echo EXPECT ERROR: teacher submits work
-insert into submissions(assignment_id, body) values ('10000000-0000-0000-0000-000000000001','x');
+-- Выполняет запрос и падает, если он НЕ завершился ошибкой.
+create function pg_temp.expect_error(label text, q text) returns void language plpgsql as $$
+begin
+  begin
+    execute q;
+  exception when others then
+    raise notice 'ok (запрещено): %', label;
+    return;
+  end;
+  raise exception 'ОЖИДАЛАСЬ ОШИБКА, но запрос прошёл: %', label;
+end;
+$$;
 
--- student submits
-set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000b';
-insert into submissions(id,assignment_id, body) values ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','I have been to Spain');
-\echo EXPECT ERROR: student submits as accepted
-insert into submissions(assignment_id, body, status) values ('10000000-0000-0000-0000-000000000001','y','accepted');
-\echo EXPECT ERROR: student accepts own work
-update submissions set status='accepted' where id='20000000-0000-0000-0000-000000000001';
-\echo EXPECT ERROR: student adds mark
-insert into marks(submission_id,start_offset,end_offset,quote,topic_id) select '20000000-0000-0000-0000-000000000001',2,11,'have been',id from topics limit 1;
+-- Проверяет, что запрос возвращает ожидаемое число.
+create function pg_temp.expect_count(label text, q text, expected bigint) returns void language plpgsql as $$
+declare
+  got bigint;
+begin
+  execute q into got;
+  if got is distinct from expected then
+    raise exception 'НЕВЕРНО: % — ожидалось %, получено %', label, expected, got;
+  end if;
+  raise notice 'ok: % = %', label, got;
+end;
+$$;
 
--- other student cannot see
-set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000c';
-\echo EXPECT 0 / 1 (other student sees no submissions, only own profile)
-select count(*) from submissions; select count(*) from profiles;
+insert into auth.users values
+  (:'teacher', 't@x.ru', '{"full_name":"Преподаватель"}'),
+  (:'anya', 'a@x.ru', '{"full_name":"Аня"}'),
+  (:'max', 'm@x.ru', '{"full_name":"Максим"}');
+update public.profiles set role = 'teacher' where id = :'teacher';
 
--- teacher marks and returns
-set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000a';
-select count(*) as teacher_sees_profiles from profiles;
-insert into marks(id,submission_id,start_offset,end_offset,quote,topic_id,comment) select '30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001',2,11,'have been',id,'Past Simple' from topics where name like 'Времена%';
-\echo EXPECT ERROR: teacher edits text
-update submissions set body='changed' where id='20000000-0000-0000-0000-000000000001';
-\echo EXPECT ERROR: teacher writes student fix
-update marks set student_fix='went' where id='30000000-0000-0000-0000-000000000001';
-update submissions set status='returned' where id='20000000-0000-0000-0000-000000000001';
-\echo EXPECT ERROR: teacher adds mark to returned work
-insert into marks(submission_id,start_offset,end_offset,quote,topic_id) select '20000000-0000-0000-0000-000000000001',15,20,'Spain',id from topics limit 1;
+-- ---------------------------------------------------------------- ученик
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученик меняет себе роль',
+  $q$update public.profiles set role = 'teacher' where id = auth.uid()$q$);
+select pg_temp.expect_error('ученик создаёт задание',
+  $q$insert into public.assignments (title) values ('hack')$q$);
+select pg_temp.expect_count('ученик видит профилей', 'select count(*) from public.profiles', 1);
 
--- student fixes
-set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000b';
-\echo EXPECT ERROR: student changes comment
-update marks set comment='nope' where id='30000000-0000-0000-0000-000000000001';
-update marks set student_fix='went' where id='30000000-0000-0000-0000-000000000001';
-\echo EXPECT ERROR: student edits body while returning
-update submissions set status='fixed', body='other' where id='20000000-0000-0000-0000-000000000001';
-update submissions set status='fixed' where id='20000000-0000-0000-0000-000000000001';
-\echo EXPECT ERROR: student edits fix after sending
-update marks set student_fix='gone' where id='30000000-0000-0000-0000-000000000001';
+-- ---------------------------------------------------------------- преподаватель создаёт задания
+set request.jwt.claim.sub = :'teacher';
+insert into public.assignments (id, title) values
+  ('10000000-0000-0000-0000-000000000001', 'Всем'),
+  ('10000000-0000-0000-0000-000000000002', 'Только Максиму');
+insert into public.assignment_students values ('10000000-0000-0000-0000-000000000002', :'max');
+select pg_temp.expect_error('преподаватель сдаёт работу',
+  $q$insert into public.submissions (assignment_id, body) values ('10000000-0000-0000-0000-000000000001', 'x')$q$);
+select pg_temp.expect_count('преподаватель видит профилей', 'select count(*) from public.profiles', 3);
 
--- other student cannot touch
-set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000c';
-update marks set student_fix='evil' where id='30000000-0000-0000-0000-000000000001';
+-- ---------------------------------------------------------------- выдача конкретным ученикам
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('Аня видит заданий', 'select count(*) from public.assignments', 1);
+select pg_temp.expect_count('Аня видит строк выдачи', 'select count(*) from public.assignment_students', 0);
+select pg_temp.expect_error('Аня сдаёт чужое задание',
+  $q$insert into public.submissions (assignment_id, body) values ('10000000-0000-0000-0000-000000000002', 'x')$q$);
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('Максим видит заданий', 'select count(*) from public.assignments', 2);
+select pg_temp.expect_error('Максим выдаёт себе задание',
+  $q$insert into public.assignment_students values ('10000000-0000-0000-0000-000000000001', auth.uid())$q$);
 
--- teacher accepts
-set request.jwt.claim.sub='00000000-0000-0000-0000-00000000000a';
-update submissions set status='accepted' where id='20000000-0000-0000-0000-000000000001';
-\echo EXPECT ERROR: teacher reopens accepted
-update submissions set status='returned' where id='20000000-0000-0000-0000-000000000001';
+-- ---------------------------------------------------------------- ученик сдаёт
+set request.jwt.claim.sub = :'anya';
+insert into public.submissions (id, assignment_id, body)
+  values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'I have been to Spain');
+select pg_temp.expect_error('ученик сдаёт сразу принятой',
+  $q$insert into public.submissions (assignment_id, body, status) values ('10000000-0000-0000-0000-000000000001', 'y', 'accepted')$q$);
+select pg_temp.expect_error('ученик сам принимает работу',
+  $q$update public.submissions set status = 'accepted' where id = '20000000-0000-0000-0000-000000000001'$q$);
+select pg_temp.expect_error('ученик ставит пометку',
+  $q$insert into public.marks (submission_id, start_offset, end_offset, quote, topic_id)
+     select '20000000-0000-0000-0000-000000000001', 2, 11, 'have been', id from public.topics limit 1$q$);
+
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('Максим видит чужих работ', 'select count(*) from public.submissions', 0);
+
+-- ---------------------------------------------------------------- преподаватель проверяет
+set request.jwt.claim.sub = :'teacher';
+insert into public.marks (id, submission_id, start_offset, end_offset, quote, topic_id, comment)
+  select '30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 2, 11, 'have been', id, 'Past Simple'
+  from public.topics where name like 'Времена%';
+select pg_temp.expect_error('преподаватель меняет текст ученика',
+  $q$update public.submissions set body = 'changed' where id = '20000000-0000-0000-0000-000000000001'$q$);
+select pg_temp.expect_error('преподаватель пишет исправление за ученика',
+  $q$update public.marks set student_fix = 'went' where id = '30000000-0000-0000-0000-000000000001'$q$);
+update public.submissions set status = 'returned' where id = '20000000-0000-0000-0000-000000000001';
+select pg_temp.expect_error('пометка к работе на исправлении',
+  $q$insert into public.marks (submission_id, start_offset, end_offset, quote, topic_id)
+     select '20000000-0000-0000-0000-000000000001', 15, 20, 'Spain', id from public.topics limit 1$q$);
+select pg_temp.expect_error('удаление темы, которая используется',
+  $q$delete from public.topics where name like 'Времена%'$q$);
+
+-- ---------------------------------------------------------------- ученик исправляет
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученик меняет комментарий',
+  $q$update public.marks set comment = 'nope' where id = '30000000-0000-0000-0000-000000000001'$q$);
+update public.marks set student_fix = 'went' where id = '30000000-0000-0000-0000-000000000001';
+select pg_temp.expect_error('ученик меняет текст при отправке',
+  $q$update public.submissions set status = 'fixed', body = 'other' where id = '20000000-0000-0000-0000-000000000001'$q$);
+update public.submissions set status = 'fixed' where id = '20000000-0000-0000-0000-000000000001';
+select pg_temp.expect_error('ученик меняет исправление после отправки',
+  $q$update public.marks set student_fix = 'gone' where id = '30000000-0000-0000-0000-000000000001'$q$);
+
+set request.jwt.claim.sub = :'max';
+update public.marks set student_fix = 'evil' where id = '30000000-0000-0000-0000-000000000001';
+
+-- ---------------------------------------------------------------- преподаватель принимает
+set request.jwt.claim.sub = :'teacher';
+update public.submissions set status = 'accepted' where id = '20000000-0000-0000-0000-000000000001';
+select pg_temp.expect_error('принятую работу снова возвращают',
+  $q$update public.submissions set status = 'returned' where id = '20000000-0000-0000-0000-000000000001'$q$);
+
 reset role;
-select s.status, m.quote, m.student_fix, m.comment from submissions s join marks m on m.submission_id=s.id;
+select pg_temp.expect_count('итог: принято с исправлением went',
+  $q$select count(*) from public.submissions s join public.marks m on m.submission_id = s.id
+     where s.status = 'accepted' and m.student_fix = 'went'$q$, 1);
+
+\echo 'Все проверки прав прошли.'

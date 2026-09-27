@@ -68,7 +68,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn:disabled { opacity: .45; cursor: default; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
-input[type="text"], input[type="email"], input[type="password"], input[type="date"], select, textarea {
+input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="number"], select, textarea {
   background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; color: var(--ink);
 }
 textarea { min-height: 70px; resize: vertical; }
@@ -114,3 +114,12 @@ textarea.long { min-height: 260px; font: 16px/1.8 var(--serif); }
 .topic small { grid-column: 1 / -1; font-size: 12px; }
 
 .auth { max-width: 420px; }
+
+.choices { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0; display: grid; gap: 6px; }
+.choices legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+label.check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink); }
+.nav { display: flex; flex-wrap: wrap; gap: 14px; }
+.nav a { color: var(--ink); text-decoration: none; }
+.nav a:hover { color: var(--accent); }
+.topic-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 80px auto auto; gap: 8px; align-items: end; }
+@media (max-width: 760px) { .topic-row { grid-template-columns: 1fr; } }

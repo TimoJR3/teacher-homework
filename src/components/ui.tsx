@@ -8,9 +8,17 @@ export function Header({ profile }: { profile: Profile }) {
   const home = profile.role === "teacher" ? "/teacher" : "/student";
   return (
     <header className="topbar">
-      <Link href={home} className="brand">
-        Тетрадь с пометками
-      </Link>
+      <div className="row" style={{ gap: 20 }}>
+        <Link href={home} className="brand">
+          Тетрадь с пометками
+        </Link>
+        {profile.role === "teacher" ? (
+          <nav className="nav small" aria-label="Разделы">
+            <Link href="/teacher">Работы</Link>
+            <Link href="/teacher/topics">Темы ошибок</Link>
+          </nav>
+        ) : null}
+      </div>
       <div className="row">
         <span className="muted small">
           {displayName(profile)} · {profile.role === "teacher" ? "преподаватель" : "ученик"}

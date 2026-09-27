@@ -10,6 +10,7 @@ export type Assignment = {
   due_at: string | null;
   created_at: string;
 };
+export type AssignmentStudent = { assignment_id: string; student_id: string };
 export type Submission = {
   id: string;
   assignment_id: string;

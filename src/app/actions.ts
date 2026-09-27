@@ -63,10 +63,25 @@ export async function createAssignment(form: FormData) {
   // Срок хранится как конец выбранного дня по московскому времени.
   const due_at = /^\d{4}-\d{2}-\d{2}$/.test(due) ? `${due}T23:59:00+03:00` : null;
 
-  const { error } = await supabase
+  const { data: created, error } = await supabase
     .from("assignments")
-    .insert({ title, description: str(form, "description"), due_at });
-  if (error) fail("/teacher", `Задание не сохранено: ${error.message}`);
+    .insert({ title, description: str(form, "description"), due_at })
+    .select("id")
+    .single();
+  if (error || !created) fail("/teacher", `Задание не сохранено: ${error?.message ?? "нет ответа"}`);
+
+  // Никто не отмечен — задание для всех учеников.
+  const studentIds = form.getAll("student_ids").filter((v): v is string => typeof v === "string" && v !== "");
+  if (studentIds.length) {
+    const { error: recErr } = await supabase
+      .from("assignment_students")
+      .insert(studentIds.map((student_id) => ({ assignment_id: created.id, student_id })));
+    if (recErr) {
+      // Без строк выдачи задание увидели бы все, поэтому откатываем его.
+      await supabase.from("assignments").delete().eq("id", created.id);
+      fail("/teacher", `Задание не сохранено: ${recErr.message}`);
+    }
+  }
   revalidatePath("/teacher");
   revalidatePath("/student");
   redirect("/teacher");
@@ -139,6 +154,53 @@ export async function reviewSubmission(submissionId: string, decision: "returned
   revalidatePath("/teacher");
   revalidatePath(path);
   redirect(path);
+}
+
+// ---------------------------------------------------------------------------
+// Темы ошибок
+// ---------------------------------------------------------------------------
+
+function topicFields(form: FormData) {
+  const order = Number(str(form, "sort_order"));
+  return {
+    name: str(form, "name"),
+    rule: str(form, "rule"),
+    sort_order: Number.isFinite(order) ? Math.round(order) : 0,
+  };
+}
+
+export async function addTopic(form: FormData) {
+  const { supabase } = await requireRole("teacher");
+  const fields = topicFields(form);
+  if (!fields.name) fail("/teacher/topics", "Укажите название темы.");
+  const { error } = await supabase.from("topics").insert(fields);
+  if (error) fail("/teacher/topics", topicError(error.code, error.message));
+  revalidatePath("/teacher/topics");
+  redirect("/teacher/topics");
+}
+
+export async function saveTopic(topicId: string, form: FormData) {
+  const { supabase } = await requireRole("teacher");
+  const fields = topicFields(form);
+  if (!fields.name) fail("/teacher/topics", "Название темы не может быть пустым.");
+  const { error } = await supabase.from("topics").update(fields).eq("id", topicId);
+  if (error) fail("/teacher/topics", topicError(error.code, error.message));
+  revalidatePath("/teacher/topics");
+  redirect("/teacher/topics");
+}
+
+export async function deleteTopic(topicId: string) {
+  const { supabase } = await requireRole("teacher");
+  const { error } = await supabase.from("topics").delete().eq("id", topicId);
+  if (error) fail("/teacher/topics", topicError(error.code, error.message));
+  revalidatePath("/teacher/topics");
+  redirect("/teacher/topics");
+}
+
+function topicError(code: string | undefined, message: string): string {
+  if (code === "23505") return "Тема с таким названием уже есть.";
+  if (code === "23503") return "Эта тема уже стоит в пометках, поэтому удалить её нельзя. Можно переименовать.";
+  return `Не получилось сохранить тему: ${message}`;
 }
 
 // ---------------------------------------------------------------------------
