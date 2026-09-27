@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { authErrorText } from "@/lib/auth-errors";
 import { isValidRange, overlaps } from "@/lib/text";
 
 function str(form: FormData, key: string): string {
@@ -25,7 +26,7 @@ export async function signIn(form: FormData) {
     email: str(form, "email"),
     password: str(form, "password"),
   });
-  if (error) fail("/login", "Не получилось войти. Проверьте почту и пароль.");
+  if (error) fail("/login", authErrorText(error, "signin"));
   redirect("/");
 }
 
@@ -38,7 +39,7 @@ export async function signUp(form: FormData) {
     password,
     options: { data: { full_name: str(form, "full_name") } },
   });
-  if (error) fail("/login", `Не получилось зарегистрироваться: ${error.message}`);
+  if (error) fail("/login", authErrorText(error, "signup"));
   if (!data.session) {
     fail("/login", "Проверьте почту и подтвердите адрес, затем войдите.");
   }
