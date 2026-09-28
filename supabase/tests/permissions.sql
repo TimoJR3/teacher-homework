@@ -120,6 +120,30 @@ update public.submissions set status = 'accepted' where id = '20000000-0000-0000
 select pg_temp.expect_error('принятую работу снова возвращают',
   $q$update public.submissions set status = 'returned' where id = '20000000-0000-0000-0000-000000000001'$q$);
 
+-- ---------------------------------------------------------------- создание и изменение заданий
+select public.create_assignment('Эссе', '', null, array['00000000-0000-0000-0000-00000000000c']::uuid[]) as essay_id \gset
+select pg_temp.expect_count('новое задание сразу только для Максима',
+  format('select count(*) from public.assignment_students where assignment_id = %L', :'essay_id'), 1);
+select pg_temp.expect_error('создание задания без названия',
+  $q$select public.create_assignment('  ', '', null, null)$q$);
+select pg_temp.expect_error('удаление задания, которое уже сдали',
+  $q$delete from public.assignments where id = '10000000-0000-0000-0000-000000000001'$q$);
+select pg_temp.expect_error('забрать задание у ученика, который его сдал',
+  $q$select public.update_assignment('10000000-0000-0000-0000-000000000001', 'Всем', '', null,
+     array['00000000-0000-0000-0000-00000000000c']::uuid[])$q$);
+select public.update_assignment('10000000-0000-0000-0000-000000000002', 'Максиму и Ане', 'новое', null,
+  array['00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c']::uuid[]);
+select pg_temp.expect_count('после изменения выдано двоим',
+  $q$select count(*) from public.assignment_students where assignment_id = '10000000-0000-0000-0000-000000000002'$q$, 2);
+delete from public.assignments where title = 'Эссе';
+
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('Аня теперь видит заданий', 'select count(*) from public.assignments', 2);
+select pg_temp.expect_error('ученик создаёт задание через функцию',
+  $q$select public.create_assignment('hack', '', null, null)$q$);
+select pg_temp.expect_error('ученик меняет задание через функцию',
+  $q$select public.update_assignment('10000000-0000-0000-0000-000000000001', 'hack', '', null, null)$q$);
+
 reset role;
 select pg_temp.expect_count('итог: принято с исправлением went',
   $q$select count(*) from public.submissions s join public.marks m on m.submission_id = s.id
