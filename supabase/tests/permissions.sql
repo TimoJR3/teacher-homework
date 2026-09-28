@@ -204,4 +204,20 @@ select pg_temp.expect_count('ученик меняет и удаляет сво�
   'select count(*) from public.notes', 0);
 reset role;
 
+-- ---------------------------------------------------------------- служебные функции закрыты от API
+set role anon;
+select pg_temp.expect_error('гость вызывает is_teacher', 'select public.is_teacher()');
+select pg_temp.expect_error('гость вызывает can_see_assignment',
+  $q$select public.can_see_assignment('10000000-0000-0000-0000-000000000001')$q$);
+select pg_temp.expect_count('гость проверяет код преподавателя',
+  $q$select count(*) from (select public.teacher_code_ok('x')) t$q$, 1);
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученик вызывает функцию триггера', 'select public.handle_new_user()');
+select pg_temp.expect_error('ученик вызывает guard_mark_update', 'select public.guard_mark_update()');
+reset role;
+insert into auth.users values ('00000000-0000-0000-0000-0000000000e1', 'after-revoke@x.ru', '{"full_name":"После закрытия"}');
+select pg_temp.expect_count('регистрация работает после закрытия функций',
+  $q$select count(*) from public.profiles where email = 'after-revoke@x.ru' and role = 'student'$q$, 1);
+
 \echo 'Все проверки прав прошли.'
