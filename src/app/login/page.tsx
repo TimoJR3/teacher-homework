@@ -1,4 +1,5 @@
-import { signIn, signUp } from "@/app/actions";
+import Link from "next/link";
+import { signIn } from "@/app/actions";
 import { ErrorBanner } from "@/components/ui";
 
 export default async function LoginPage(props: PageProps<"/login">) {
@@ -24,25 +25,19 @@ export default async function LoginPage(props: PageProps<"/login">) {
         </button>
       </form>
 
-      <form action={signUp} className="panel">
-        <h2>Регистрация</h2>
-        <p className="muted small">Новый аккаунт становится учеником. Преподавателя назначают отдельно.</p>
-        <label>
-          Имя и фамилия
-          <input type="text" name="full_name" id="signup-name" required autoComplete="name" />
-        </label>
-        <label>
-          Почта
-          <input type="email" name="email" id="signup-email" required autoComplete="email" />
-        </label>
-        <label>
-          Пароль, не короче 8 символов
-          <input type="password" name="password" id="signup-password" required minLength={8} autoComplete="new-password" />
-        </label>
-        <button className="btn" type="submit">
-          Зарегистрироваться
-        </button>
-      </form>
+      <section className="stack">
+        <h2>Ещё нет аккаунта?</h2>
+        <div className="list">
+          <Link href="/signup/student">
+            <span>Я ученик</span>
+            <small>Сдавать задания и исправлять ошибки</small>
+          </Link>
+          <Link href="/signup/teacher">
+            <span>Я преподаватель</span>
+            <small>Давать задания и проверять работы. Нужен код преподавателя</small>
+          </Link>
+        </div>
+      </section>
     </main>
   );
 }

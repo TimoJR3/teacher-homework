@@ -20,7 +20,7 @@ export function authErrorText(error: AuthErrorLike, action: "signin" | "signup")
       return "Почта ещё не подтверждена. Откройте письмо от Supabase и перейдите по ссылке.";
     case "user_already_exists":
     case "email_exists":
-      return "Аккаунт с этой почтой уже есть. Войдите через форму выше.";
+      return "Аккаунт с этой почтой уже есть. Войдите на странице входа.";
     case "weak_password":
       return "Пароль слишком простой. Возьмите не меньше 8 символов, добавьте цифры.";
     case "email_address_invalid":

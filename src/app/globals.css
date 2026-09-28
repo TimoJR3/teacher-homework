@@ -139,6 +139,7 @@ textarea.long { min-height: 280px; font: 18px/1.9 var(--serif); }
 .topic small { grid-column: 1 / -1; font: 14px/1.4 var(--sans); color: var(--muted); }
 
 .auth { max-width: 440px; margin: 20px auto 0; width: 100%; }
+.auth .list a { min-height: 0; }
 
 .choices { border: 1.5px solid #b8ab93; border-radius: 3px; padding: 10px 12px; margin: 0; display: grid; gap: 6px; }
 .choices legend { font-size: 14px; color: var(--muted); padding: 0 4px; }
