@@ -149,4 +149,25 @@ select pg_temp.expect_count('итог: принято с исправление�
   $q$select count(*) from public.submissions s join public.marks m on m.submission_id = s.id
      where s.status = 'accepted' and m.student_fix = 'went'$q$, 1);
 
+-- ---------------------------------------------------------------- регистрация преподавателя по коду
+insert into public.teacher_signup_code (code) values ('секретный-код-42');
+insert into auth.users values ('00000000-0000-0000-0000-0000000000d1', 'new-t@x.ru', '{"full_name":"Новый преподаватель","teacher_code":"секретный-код-42"}');
+select pg_temp.expect_count('с верным кодом регистрируется преподаватель',
+  $q$select count(*) from public.profiles where email = 'new-t@x.ru' and role = 'teacher'$q$, 1);
+select pg_temp.expect_error('регистрация с неверным кодом',
+  $q$insert into auth.users values ('00000000-0000-0000-0000-0000000000d2', 'fake@x.ru', '{"teacher_code":"угадал?"}')$q$);
+select pg_temp.expect_count('с неверным кодом аккаунт не создан',
+  $q$select count(*) from auth.users where email = 'fake@x.ru'$q$, 0);
+insert into auth.users values ('00000000-0000-0000-0000-0000000000d3', 'new-s@x.ru', '{"full_name":"Новый ученик"}');
+select pg_temp.expect_count('без кода регистрируется ученик',
+  $q$select count(*) from public.profiles where email = 'new-s@x.ru' and role = 'student'$q$, 1);
+
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученик читает код преподавателя',
+  'select code from public.teacher_signup_code');
+select pg_temp.expect_count('проверка кода отвечает только да или нет',
+  $q$select count(*) from (select public.teacher_code_ok('угадал?') as ok) t where not ok$q$, 1);
+reset role;
+
 \echo 'Все проверки прав прошли.'
