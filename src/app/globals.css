@@ -33,7 +33,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--desk); color: var(--ink); font: 16px/1.55 var(--sans); }
-.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 64px; display: grid; gap: 30px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 64px; display: grid; gap: 30px; }
 h1, h2 { font-family: var(--hand); font-weight: 700; line-height: 1.05; margin: 0; text-wrap: balance; }
 h1 { font-size: clamp(34px, 5vw, 44px); }
 h2 { font-size: 30px; }
@@ -46,7 +46,7 @@ a { color: var(--blue-ink); }
 .eyebrow { font-size: 14px; color: var(--muted); }
 .stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; min-width: 0; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.cols { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 44px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 44px; }
 @media (max-width: 860px) { .cols { grid-template-columns: 1fr; gap: 32px; } }
 
 /* Шапка: название наклеено полоской бумаги. */
@@ -101,6 +101,8 @@ textarea.long { min-height: 280px; font: 18px/1.9 var(--serif); }
 .list .pill { align-self: flex-end; }
 .list a:hover { transform: rotate(0) translateY(-2px); box-shadow: var(--shadow-lift); }
 .list .li { background-color: var(--card-dim); }
+.list .li.empty { transform: none; background-color: transparent; background-image: none; border: 2px dashed rgba(42, 38, 34, .35); box-shadow: none; justify-content: center; }
+.list .li.empty small { order: 0; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .list a, .list .li { transition: none; } }
 
 /* Текст работы: лист А4 на столе. */
@@ -137,6 +139,28 @@ textarea.long { min-height: 280px; font: 18px/1.9 var(--serif); }
 .meter { grid-column: 1 / -1; height: 3px; background: rgba(42, 38, 34, .15); overflow: hidden; }
 .meter i { display: block; height: 100%; background: var(--pen); }
 .topic small { grid-column: 1 / -1; font: 14px/1.4 var(--sans); color: var(--muted); }
+.topics.empty { opacity: .85; }
+
+/* Блокнот ученика: тетрадный лист в линейку с красным полем. */
+.notebook {
+  display: grid; gap: 14px; padding: 26px 28px 30px 64px; position: relative;
+  background-color: var(--card); background-image: linear-gradient(transparent 31px, var(--rule) 32px); background-size: 100% 32px; background-position: 0 22px;
+  box-shadow: var(--shadow-lift);
+}
+.notebook::before { content: ""; position: absolute; top: 0; bottom: 0; left: 44px; border-left: 2px solid var(--margin-line); }
+.note-new { display: grid; gap: 10px; justify-items: start; }
+.note-new label { width: 100%; }
+.note-new textarea, .note-edit textarea { background: rgba(255, 255, 255, .7); font: 17px/1.6 var(--serif); }
+.notes { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 18px; }
+.notes li { display: grid; gap: 2px; padding-top: 12px; border-top: 1px dashed #b8ab93; }
+.note-date { font: 700 20px/1 var(--hand); color: var(--pen); }
+.note-body { font: 18px/1.7 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-edit summary { cursor: pointer; font-size: 14px; color: var(--blue-ink); width: max-content; }
+.note-edit[open] summary { margin-bottom: 8px; }
+@media (max-width: 600px) {
+  .notebook { padding: 20px 16px 24px 34px; }
+  .notebook::before { left: 22px; }
+}
 
 .auth { max-width: 440px; margin: 20px auto 0; width: 100%; }
 .auth .list a { min-height: 0; }

@@ -50,7 +50,13 @@ export function ErrorBanner({ error }: { error?: string | string[] }) {
 
 export function TopicStats({ marks, topics }: { marks: Pick<Mark, "topic_id">[]; topics: Topic[] }) {
   const counts = countTopics(marks);
-  if (!counts.length) return <p className="muted">Пока ошибок не отмечено.</p>;
+  if (!counts.length)
+    return (
+      <div className="topics empty">
+        <span className="topic">Пока ошибок не отмечено</span>
+        <small className="muted">Когда преподаватель проверит работу, здесь появятся темы, которые стоит повторить.</small>
+      </div>
+    );
   const max = counts[0].count;
   const byId = new Map(topics.map((t) => [t.id, t]));
   return (

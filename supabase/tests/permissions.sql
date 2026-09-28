@@ -170,4 +170,38 @@ select pg_temp.expect_count('проверка кода отвечает толь
   $q$select count(*) from (select public.teacher_code_ok('угадал?') as ok) t where not ok$q$, 1);
 reset role;
 
+-- ---------------------------------------------------------------- блокнот ученика
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+insert into public.notes (body) values ('Past Simple: went, saw, did');
+select pg_temp.expect_count('ученик видит свою заметку',
+  'select count(*) from public.notes', 1);
+select pg_temp.expect_error('ученик пишет заметку от имени другого',
+  $q$insert into public.notes (student_id, body) values ('00000000-0000-0000-0000-00000000000c', 'чужая')$q$);
+select pg_temp.expect_error('пустая заметка',
+  $q$insert into public.notes (body) values ('   ')$q$);
+select pg_temp.expect_error('ученик передаёт заметку другому',
+  $q$update public.notes set student_id = '00000000-0000-0000-0000-00000000000c'$q$);
+
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('другой ученик не видит чужие заметки',
+  'select count(*) from public.notes', 0);
+update public.notes set body = 'взлом';
+delete from public.notes;
+
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_count('преподаватель не видит заметки ученика',
+  'select count(*) from public.notes', 0);
+select pg_temp.expect_error('преподаватель пишет в блокнот',
+  $q$insert into public.notes (body) values ('x')$q$);
+
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('чужие изменения и удаление не прошли',
+  $q$select count(*) from public.notes where body = 'Past Simple: went, saw, did'$q$, 1);
+update public.notes set body = 'Past Simple: went, saw, did, made';
+delete from public.notes;
+select pg_temp.expect_count('ученик меняет и удаляет свою заметку',
+  'select count(*) from public.notes', 0);
+reset role;
+
 \echo 'Все проверки прав прошли.'
