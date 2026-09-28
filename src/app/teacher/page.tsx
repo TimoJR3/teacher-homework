@@ -5,6 +5,7 @@ import { displayName, formatDate } from "@/lib/format";
 import { assignedCount, recipientsByAssignment } from "@/lib/assignments";
 import type { Assignment, AssignmentStudent, Profile, Submission } from "@/lib/types";
 import { ErrorBanner, Header, StatusPill } from "@/components/ui";
+import { AssignmentForm } from "@/components/assignment-form";
 
 export default async function TeacherHome(props: PageProps<"/teacher">) {
   const { error } = await props.searchParams;
@@ -59,7 +60,7 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
           {assignments?.length ? (
             <div className="list">
               {(assignments as Assignment[]).map((a) => (
-                <div className="li" key={a.id}>
+                <Link key={a.id} href={`/teacher/assignments/${a.id}`}>
                   <span>{a.title}</span>
                   <span className="muted small">
                     сдали {subs.filter((s) => s.assignment_id === a.id).length} из{" "}
@@ -68,7 +69,7 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
                   <small>
                     срок: {formatDate(a.due_at)} · для: {forWhom(a.id)}
                   </small>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -77,36 +78,7 @@ export default async function TeacherHome(props: PageProps<"/teacher">) {
         </main>
 
         <aside className="stack">
-          <form action={createAssignment} className="panel">
-            <h3>Новое задание</h3>
-            <label>
-              Название
-              <input type="text" name="title" id="assignment-title" required placeholder="Essay: My last holiday" />
-            </label>
-            <label>
-              Что нужно сделать
-              <textarea name="description" id="assignment-description" placeholder="120–150 слов, используйте Past Simple" />
-            </label>
-            <label>
-              Срок
-              <input type="date" name="due" id="assignment-due" />
-            </label>
-            {students?.length ? (
-              <fieldset className="choices">
-                <legend>Кому выдать</legend>
-                {(students as Profile[]).map((s) => (
-                  <label key={s.id} className="check">
-                    <input type="checkbox" name="student_ids" value={s.id} id={`assign-${s.id}`} />
-                    {displayName(s)}
-                  </label>
-                ))}
-                <small className="muted">Если никого не отметить, задание получат все ученики.</small>
-              </fieldset>
-            ) : null}
-            <button className="btn primary" type="submit">
-              Создать
-            </button>
-          </form>
+          <AssignmentForm action={createAssignment} students={(students ?? []) as Profile[]} />
 
           <div className="stack">
             <h3>Ученики</h3>

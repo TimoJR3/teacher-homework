@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { authErrorText } from "@/lib/auth-errors";
+import { dueAtFromInput } from "@/lib/format";
 import { isValidRange, overlaps } from "@/lib/text";
 
 function str(form: FormData, key: string): string {
@@ -25,7 +27,7 @@ export async function signIn(form: FormData) {
     email: str(form, "email"),
     password: str(form, "password"),
   });
-  if (error) fail("/login", "Не получилось войти. Проверьте почту и пароль.");
+  if (error) fail("/login", authErrorText(error, "signin"));
   redirect("/");
 }
 
@@ -38,7 +40,7 @@ export async function signUp(form: FormData) {
     password,
     options: { data: { full_name: str(form, "full_name") } },
   });
-  if (error) fail("/login", `Не получилось зарегистрироваться: ${error.message}`);
+  if (error) fail("/login", authErrorText(error, "signup"));
   if (!data.session) {
     fail("/login", "Проверьте почту и подтвердите адрес, затем войдите.");
   }
@@ -55,33 +57,49 @@ export async function signOut() {
 // Преподаватель
 // ---------------------------------------------------------------------------
 
+function assignmentFields(form: FormData) {
+  return {
+    p_title: str(form, "title"),
+    p_description: str(form, "description"),
+    p_due_at: dueAtFromInput(str(form, "due")),
+    // Никто не отмечен — задание для всех учеников.
+    p_student_ids: form.getAll("student_ids").filter((v): v is string => typeof v === "string" && v !== ""),
+  };
+}
+
 export async function createAssignment(form: FormData) {
   const { supabase } = await requireRole("teacher");
-  const title = str(form, "title");
-  const due = str(form, "due");
-  if (!title) fail("/teacher", "Укажите название задания.");
-  // Срок хранится как конец выбранного дня по московскому времени.
-  const due_at = /^\d{4}-\d{2}-\d{2}$/.test(due) ? `${due}T23:59:00+03:00` : null;
+  const fields = assignmentFields(form);
+  if (!fields.p_title) fail("/teacher", "Укажите название задания.");
 
-  const { data: created, error } = await supabase
-    .from("assignments")
-    .insert({ title, description: str(form, "description"), due_at })
-    .select("id")
-    .single();
-  if (error || !created) fail("/teacher", `Задание не сохранено: ${error?.message ?? "нет ответа"}`);
+  // Задание и список учеников создаются в базе одной операцией.
+  const { data: id, error } = await supabase.rpc("create_assignment", fields);
+  if (error || !id) fail("/teacher", `Задание не сохранено: ${error?.message ?? "нет ответа"}`);
+  revalidatePath("/teacher");
+  revalidatePath("/student");
+  redirect(`/teacher/assignments/${id}`);
+}
 
-  // Никто не отмечен — задание для всех учеников.
-  const studentIds = form.getAll("student_ids").filter((v): v is string => typeof v === "string" && v !== "");
-  if (studentIds.length) {
-    const { error: recErr } = await supabase
-      .from("assignment_students")
-      .insert(studentIds.map((student_id) => ({ assignment_id: created.id, student_id })));
-    if (recErr) {
-      // Без строк выдачи задание увидели бы все, поэтому откатываем его.
-      await supabase.from("assignments").delete().eq("id", created.id);
-      fail("/teacher", `Задание не сохранено: ${recErr.message}`);
-    }
-  }
+export async function updateAssignment(assignmentId: string, form: FormData) {
+  const { supabase } = await requireRole("teacher");
+  const path = `/teacher/assignments/${assignmentId}`;
+  const fields = assignmentFields(form);
+  if (!fields.p_title) fail(path, "Укажите название задания.");
+
+  const { error } = await supabase.rpc("update_assignment", { p_id: assignmentId, ...fields });
+  if (error) fail(path, `Изменения не сохранены: ${error.message}`);
+  revalidatePath("/teacher");
+  revalidatePath("/student");
+  revalidatePath(path);
+  redirect(path);
+}
+
+export async function deleteAssignment(assignmentId: string) {
+  const { supabase } = await requireRole("teacher");
+  const path = `/teacher/assignments/${assignmentId}`;
+  const { error } = await supabase.from("assignments").delete().eq("id", assignmentId);
+  if (error?.code === "23503") fail(path, "Это задание уже сдали, поэтому удалить его нельзя.");
+  if (error) fail(path, `Задание не удалено: ${error.message}`);
   revalidatePath("/teacher");
   revalidatePath("/student");
   redirect("/teacher");
