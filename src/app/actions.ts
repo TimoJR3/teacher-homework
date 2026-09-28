@@ -32,16 +32,28 @@ export async function signIn(form: FormData) {
 }
 
 export async function signUp(form: FormData) {
+  const role = str(form, "role") === "teacher" ? "teacher" : "student";
+  const page = `/signup/${role}`;
   const supabase = await createClient();
   const password = str(form, "password");
-  if (password.length < 8) fail("/login", "Пароль должен быть не короче 8 символов.");
-  const { data, error } = await supabase.auth.signUp({
+  if (password.length < 8) fail(page, "Пароль должен быть не короче 8 символов.");
+
+  const data: Record<string, string> = { full_name: str(form, "full_name") };
+  if (role === "teacher") {
+    const code = str(form, "teacher_code");
+    // Та же проверка есть в базе при создании аккаунта; здесь она нужна, чтобы показать понятную ошибку.
+    const { data: ok } = await supabase.rpc("teacher_code_ok", { p_code: code });
+    if (!code || ok !== true) fail(page, "Неверный код преподавателя. Уточните его у того, кто ведёт сайт.");
+    data.teacher_code = code;
+  }
+
+  const { data: result, error } = await supabase.auth.signUp({
     email: str(form, "email"),
     password,
-    options: { data: { full_name: str(form, "full_name") } },
+    options: { data },
   });
-  if (error) fail("/login", authErrorText(error, "signup"));
-  if (!data.session) {
+  if (error) fail(page, authErrorText(error, "signup"));
+  if (!result.session) {
     fail("/login", "Проверьте почту и подтвердите адрес, затем войдите.");
   }
   redirect("/");
