@@ -38,3 +38,4 @@ export const STATUS_LABEL: Record<Status, string> = {
   fixed: "Исправлено",
   accepted: "Принято",
 };
+export type Note = { id: string; student_id: string; body: string; created_at: string; updated_at: string };

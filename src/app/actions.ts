@@ -276,3 +276,40 @@ export async function sendFixes(assignmentId: string, submissionId: string, form
   revalidatePath("/student");
   redirect(path);
 }
+
+// ---------------------------------------------------------------------------
+// Блокнот ученика
+// ---------------------------------------------------------------------------
+
+const NOTE_MAX = 5000;
+
+function noteBody(form: FormData): string {
+  const body = str(form, "body");
+  if (!body) fail("/student", "Запись пустая.");
+  if (body.length > NOTE_MAX) fail("/student", `Запись длиннее ${NOTE_MAX} символов, разбейте её на несколько.`);
+  return body;
+}
+
+export async function addNote(form: FormData) {
+  const { supabase } = await requireRole("student");
+  const { error } = await supabase.from("notes").insert({ body: noteBody(form) });
+  if (error) fail("/student", `Запись не сохранена: ${error.message}`);
+  revalidatePath("/student");
+  redirect("/student#notebook");
+}
+
+export async function updateNote(noteId: string, form: FormData) {
+  const { supabase } = await requireRole("student");
+  const { error } = await supabase.from("notes").update({ body: noteBody(form) }).eq("id", noteId);
+  if (error) fail("/student", `Запись не сохранена: ${error.message}`);
+  revalidatePath("/student");
+  redirect("/student#notebook");
+}
+
+export async function deleteNote(noteId: string) {
+  const { supabase } = await requireRole("student");
+  const { error } = await supabase.from("notes").delete().eq("id", noteId);
+  if (error) fail("/student", `Запись не удалена: ${error.message}`);
+  revalidatePath("/student");
+  redirect("/student#notebook");
+}
