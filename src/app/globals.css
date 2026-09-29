@@ -323,3 +323,23 @@ ins { color: var(--stamp-green); text-decoration: none; font: 700 22px/1 var(--h
 .upload label.btn:focus-within { outline: 2px solid var(--stamp-blue); outline-offset: 2px; }
 .upload label.btn.disabled { opacity: .6; cursor: default; }
 .upload-error { flex-basis: 100%; margin: 0; color: var(--stamp-red); }
+
+/* ---------------------------------------------------------------- учебник */
+.book-pick { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; padding-top: 12px; border-top: 1px dashed rgba(42, 38, 34, .25); }
+.book-pick label { flex: 1 1 200px; }
+.book-pick label:nth-of-type(2) { flex: 0 1 120px; }
+.book-pick > span { flex-basis: 100%; }
+.book-view { max-width: 980px; }
+.book-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 20px; }
+.book-bar h1 { margin: 0; }
+.book-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.book-jump { display: flex; gap: 6px; align-items: center; }
+.book-jump input { width: 80px; }
+.book-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.book-added { margin: 0; padding: 10px 14px; background: var(--card); border-left: 4px solid var(--stamp-green); font-weight: 700; }
+.book-page { display: block; width: 100%; height: auto; background: #fff; padding: 8px; box-shadow: var(--shadow-lift); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.book-import input[type="file"] { padding: 8px; background: var(--card-dim); }
+.import-progress { display: grid; gap: 4px; }
+.import-progress progress { width: 100%; height: 10px; accent-color: var(--stamp-blue); }
+.book-import select, .book-import input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }

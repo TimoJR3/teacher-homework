@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deleteAssignment, updateAssignment } from "@/app/actions";
+import { addBookPages, deleteAssignment, updateAssignment } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 import { displayName, formatDate } from "@/lib/format";
 import type { Assignment, Profile, Submission } from "@/lib/types";
 import { ErrorBanner, Header, StatusPill } from "@/components/ui";
 import { AssignmentForm } from "@/components/assignment-form";
-import { loadMaterials, Materials } from "@/components/materials";
+import { BookPagesForm, loadMaterials, Materials } from "@/components/materials";
 import { MaterialUpload } from "@/components/material-upload";
 
 export default async function AssignmentPage(props: PageProps<"/teacher/assignments/[id]">) {
@@ -50,15 +50,21 @@ export default async function AssignmentPage(props: PageProps<"/teacher/assignme
 
           <section className="stack material-box">
             <h2>Материалы</h2>
-            {a.textbook || materials.items.length ? (
-              <Materials textbook={a.textbook} items={materials.items} assignmentId={a.id} editable />
+            {a.textbook || materials.items.length || materials.bookPages.length ? (
+              <Materials
+                textbook={a.textbook}
+                items={materials.items}
+                bookPages={materials.bookPages}
+                assignmentId={a.id}
+                editable
+              />
             ) : (
               <p className="muted small">
-                Укажите страницы учебника в форме справа или прикрепите фото страниц и PDF. Ученик увидит их на странице
-                задания.
+                Добавьте страницы из учебника или прикрепите свои файлы. Ученик увидит их на странице задания.
               </p>
             )}
-            {materials.failed ? <p className="upload-error small">Не удалось загрузить список файлов.</p> : null}
+            {materials.failed ? <p className="upload-error small">Не удалось загрузить список материалов.</p> : null}
+            <BookPagesForm books={materials.books} assignmentId={a.id} action={addBookPages.bind(null, a.id)} />
             <MaterialUpload assignmentId={a.id} />
           </section>
 

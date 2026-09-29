@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# копируется из pdfjs-dist при сборке
+/public/pdf.worker.min.mjs
