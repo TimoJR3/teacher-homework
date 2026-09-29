@@ -1,13 +1,9 @@
 import Link from "next/link";
 import { addNote, deleteNote, updateNote } from "@/app/actions";
 import { formatDate, plural } from "@/lib/format";
+import { splitWord } from "@/lib/student";
 import { NOTE_KINDS, type Note, type NoteKind } from "@/lib/types";
 
-// «borrow — брать взаймы»: слово отдельно, перевод отдельно.
-function splitWord(body: string): [string, string] | null {
-  const m = /^(.+?)\s+[—–-]\s+([\s\S]+)$/.exec(body);
-  return m ? [m[1], m[2]] : null;
-}
 
 function KindPicker({ name, value }: { name: string; value: NoteKind }) {
   return (
@@ -46,7 +42,8 @@ export function Notebook({ notes, filter, unavailable }: { notes: Note[]; filter
         <div>
           <h2 id="notebook-title">Мой блокнот</h2>
           <p className="muted small">
-            {notes.length} {plural(notes.length, "запись", "записи", "записей")} · видите только вы
+            {notes.length} {plural(notes.length, "запись", "записи", "записей")} · видите только вы ·{" "}
+            <Link href="/student/cards">тренировать слова</Link>
           </p>
         </div>
         <nav className="tabs" aria-label="Виды записей">

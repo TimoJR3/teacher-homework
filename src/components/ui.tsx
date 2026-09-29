@@ -12,6 +12,7 @@ const NAV = {
   student: [
     { href: "/student", label: "Главная" },
     { href: "/student/mistakes", label: "Мои ошибки" },
+    { href: "/student/cards", label: "Карточки" },
     { href: "/student#notebook", label: "Блокнот" },
   ],
 };
