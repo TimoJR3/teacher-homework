@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { bucketAssignments, lastWeek, splitWord, streak, upcoming } from "./student.ts";
 import type { Assignment, Submission } from "./types.ts";
 
-const a = (id: string, due_at: string | null = null): Assignment => ({ id, title: id, description: "", due_at, created_at: "" });
+const a = (id: string, due_at: string | null = null): Assignment => ({ id, title: id, description: "", due_at, textbook: "", created_at: "" });
 const s = (assignment_id: string, status: Submission["status"]): Submission => ({
   id: `s-${assignment_id}`, assignment_id, student_id: "me", body: "x", status, submitted_at: "", updated_at: "",
 });

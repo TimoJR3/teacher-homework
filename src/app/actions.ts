@@ -8,6 +8,7 @@ import { authErrorText } from "@/lib/auth-errors";
 import { dueAtFromInput } from "@/lib/format";
 import { isValidRange, overlaps } from "@/lib/text";
 import { isNoteKind } from "@/lib/types";
+import { MATERIALS_BUCKET } from "@/lib/materials";
 
 function str(form: FormData, key: string): string {
   const v = form.get(key);
@@ -88,6 +89,11 @@ export async function createAssignment(form: FormData) {
   // Задание и список учеников создаются в базе одной операцией.
   const { data: id, error } = await supabase.rpc("create_assignment", fields);
   if (error || !id) fail("/teacher", `Задание не сохранено: ${error?.message ?? "нет ответа"}`);
+  const textbook = str(form, "textbook");
+  if (textbook) {
+    const { error: tbErr } = await supabase.from("assignments").update({ textbook }).eq("id", id);
+    if (tbErr) fail(`/teacher/assignments/${id}`, `Задание создано, но страницы учебника не сохранены: ${tbErr.message}`);
+  }
   revalidatePath("/teacher");
   revalidatePath("/student");
   redirect(`/teacher/assignments/${id}`);
@@ -101,6 +107,11 @@ export async function updateAssignment(assignmentId: string, form: FormData) {
 
   const { error } = await supabase.rpc("update_assignment", { p_id: assignmentId, ...fields });
   if (error) fail(path, `Изменения не сохранены: ${error.message}`);
+  const { error: tbErr } = await supabase
+    .from("assignments")
+    .update({ textbook: str(form, "textbook") })
+    .eq("id", assignmentId);
+  if (tbErr) fail(path, `Страницы учебника не сохранены: ${tbErr.message}`);
   revalidatePath("/teacher");
   revalidatePath("/student");
   revalidatePath(path);
@@ -110,12 +121,28 @@ export async function updateAssignment(assignmentId: string, form: FormData) {
 export async function deleteAssignment(assignmentId: string) {
   const { supabase } = await requireRole("teacher");
   const path = `/teacher/assignments/${assignmentId}`;
+  const { data: files } = await supabase.from("materials").select("path").eq("assignment_id", assignmentId);
   const { error } = await supabase.from("assignments").delete().eq("id", assignmentId);
   if (error?.code === "23503") fail(path, "Это задание уже сдали, поэтому удалить его нельзя.");
   if (error) fail(path, `Задание не удалено: ${error.message}`);
+  // Описания файлов удалились вместе с заданием, сами файлы убираем из хранилища.
+  if (files?.length) await supabase.storage.from(MATERIALS_BUCKET).remove(files.map((f) => f.path as string));
   revalidatePath("/teacher");
   revalidatePath("/student");
   redirect("/teacher");
+}
+
+export async function deleteMaterial(assignmentId: string, materialId: string) {
+  const { supabase } = await requireRole("teacher");
+  const path = `/teacher/assignments/${assignmentId}`;
+  const { data: m } = await supabase.from("materials").select("path").eq("id", materialId).maybeSingle();
+  if (!m) fail(path, "Файл не найден.");
+  const { error } = await supabase.from("materials").delete().eq("id", materialId);
+  if (error) fail(path, `Файл не убран: ${error.message}`);
+  await supabase.storage.from(MATERIALS_BUCKET).remove([m.path as string]);
+  revalidatePath(path);
+  revalidatePath(`/student/assignments/${assignmentId}`);
+  redirect(path);
 }
 
 export async function addMark(submissionId: string, form: FormData) {

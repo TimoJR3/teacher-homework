@@ -255,4 +255,36 @@ set role anon;
 select pg_temp.expect_error('гость отмечает день', 'select public.mark_study_day()');
 reset role;
 
+-- ---------------------------------------------------------------- материалы к заданию
+set role authenticated;
+set request.jwt.claim.sub = :'teacher';
+select public.create_assignment('Unit 3B', '', null, array['00000000-0000-0000-0000-00000000000b']::uuid[]) as mat_id \gset
+update public.assignments set textbook = 'English File, Unit 3B, с. 24' where id = :'mat_id';
+insert into storage.objects (bucket_id, name) values ('materials', :'mat_id' || '/p24.jpg');
+insert into public.materials (assignment_id, path, name) values (:'mat_id', :'mat_id' || '/p24.jpg', 'Страница 24.jpg');
+select pg_temp.expect_error('путь файла не из папки задания',
+  format($q$insert into public.materials (assignment_id, path, name) values (%L, 'чужое/x.pdf', 'x')$q$, :'mat_id'));
+select pg_temp.expect_error('слишком длинная ссылка на учебник',
+  format($q$update public.assignments set textbook = repeat('x', 301) where id = %L$q$, :'mat_id'));
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('ученица видит материалы своего задания', 'select count(*) from public.materials', 1);
+select pg_temp.expect_count('ученица видит файл своего задания',
+  $q$select count(*) from storage.objects where bucket_id = 'materials'$q$, 1);
+select pg_temp.expect_error('ученица загружает файл',
+  format($q$insert into storage.objects (bucket_id, name) values ('materials', %L)$q$, :'mat_id' || '/x.pdf'));
+select pg_temp.expect_error('ученица добавляет материал',
+  format($q$insert into public.materials (assignment_id, path, name) values (%L, %L, 'x')$q$, :'mat_id', :'mat_id' || '/x.pdf'));
+delete from public.materials;
+delete from storage.objects;
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('ученик не видит материалы чужого задания', 'select count(*) from public.materials', 0);
+select pg_temp.expect_count('ученик не видит файл чужого задания',
+  $q$select count(*) from storage.objects where bucket_id = 'materials'$q$, 0);
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_count('ученица ничего не удалила', 'select count(*) from public.materials', 1);
+delete from public.materials;
+delete from storage.objects where bucket_id = 'materials';
+select pg_temp.expect_count('преподаватель удаляет материалы', 'select count(*) from storage.objects', 0);
+reset role;
+
 \echo 'Все проверки прав прошли.'
