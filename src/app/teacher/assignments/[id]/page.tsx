@@ -6,6 +6,8 @@ import { displayName, formatDate } from "@/lib/format";
 import type { Assignment, Profile, Submission } from "@/lib/types";
 import { ErrorBanner, Header, StatusPill } from "@/components/ui";
 import { AssignmentForm } from "@/components/assignment-form";
+import { loadMaterials, Materials } from "@/components/materials";
+import { MaterialUpload } from "@/components/material-upload";
 
 export default async function AssignmentPage(props: PageProps<"/teacher/assignments/[id]">) {
   const { id } = await props.params;
@@ -16,10 +18,11 @@ export default async function AssignmentPage(props: PageProps<"/teacher/assignme
   if (!assignment) notFound();
   const a = assignment as Assignment;
 
-  const [{ data: students }, { data: recipientRows }, { data: submissions }] = await Promise.all([
+  const [{ data: students }, { data: recipientRows }, { data: submissions }, materials] = await Promise.all([
     supabase.from("profiles").select("id, email, full_name, role").eq("role", "student").order("full_name"),
     supabase.from("assignment_students").select("student_id").eq("assignment_id", id),
     supabase.from("submissions").select("*").eq("assignment_id", id),
+    loadMaterials(supabase, id),
   ]);
 
   const allStudents = (students ?? []) as Profile[];
@@ -44,6 +47,20 @@ export default async function AssignmentPage(props: PageProps<"/teacher/assignme
             <h1>{a.title}</h1>
           </div>
           {a.description ? <p style={{ whiteSpace: "pre-wrap" }}>{a.description}</p> : null}
+
+          <section className="stack material-box">
+            <h2>Материалы</h2>
+            {a.textbook || materials.items.length ? (
+              <Materials textbook={a.textbook} items={materials.items} assignmentId={a.id} editable />
+            ) : (
+              <p className="muted small">
+                Укажите страницы учебника в форме справа или прикрепите фото страниц и PDF. Ученик увидит их на странице
+                задания.
+              </p>
+            )}
+            {materials.failed ? <p className="upload-error small">Не удалось загрузить список файлов.</p> : null}
+            <MaterialUpload assignmentId={a.id} />
+          </section>
 
           <h2>
             Сдали {subs.length} из {assigned.length}

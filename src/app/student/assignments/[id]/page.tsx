@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import type { Assignment, Mark, Submission, Topic } from "@/lib/types";
 import { ErrorBanner, Header, MarkList, MarkedText, StatusPill } from "@/components/ui";
+import { loadMaterials, Materials } from "@/components/materials";
 
 const STATUS_HINT = {
   submitted: "Работа отправлена и ждёт проверки.",
@@ -29,11 +30,12 @@ export default async function AssignmentPage(props: PageProps<"/student/assignme
     .maybeSingle();
   const sub = submission as Submission | null;
 
-  const [{ data: marks }, { data: topics }] = await Promise.all([
+  const [{ data: marks }, { data: topics }, materials] = await Promise.all([
     sub
       ? supabase.from("marks").select("*").eq("submission_id", sub.id).order("start_offset")
       : Promise.resolve({ data: [] }),
     supabase.from("topics").select("*").order("sort_order"),
+    loadMaterials(supabase, id),
   ]);
   const ms = (marks ?? []) as Mark[];
   const ts = (topics ?? []) as Topic[];
@@ -55,7 +57,13 @@ export default async function AssignmentPage(props: PageProps<"/student/assignme
           </div>
           <StatusPill status={sub?.status ?? null} />
         </div>
-        {a.description ? <p>{a.description}</p> : null}
+        {a.description ? <p style={{ whiteSpace: "pre-wrap" }}>{a.description}</p> : null}
+        {a.textbook || materials.items.length ? (
+          <section className="stack material-box">
+            <h2>Материалы</h2>
+            <Materials textbook={a.textbook} items={materials.items} assignmentId={a.id} />
+          </section>
+        ) : null}
 
         {!sub ? (
           <form action={submitWork.bind(null, a.id)} className="panel">

@@ -8,6 +8,17 @@ export type Assignment = {
   title: string;
   description: string;
   due_at: string | null;
+  // Страницы учебника, например «English File Pre-Intermediate, Unit 3B, с. 24–25».
+  textbook: string;
+  created_at: string;
+};
+export type Material = {
+  id: string;
+  assignment_id: string;
+  path: string;
+  name: string;
+  size: number;
+  mime: string;
   created_at: string;
 };
 export type AssignmentStudent = { assignment_id: string; student_id: string };

@@ -42,6 +42,17 @@ export function AssignmentForm({
         />
       </label>
       <label>
+        Страницы учебника
+        <input
+          type="text"
+          name="textbook"
+          id={`textbook-${key}`}
+          maxLength={300}
+          defaultValue={assignment?.textbook}
+          placeholder="English File Pre-Intermediate, Unit 3B, с. 24–25"
+        />
+      </label>
+      <label>
         Срок
         <input type="date" name="due" id={`due-${key}`} defaultValue={dueInputValue(assignment?.due_at ?? null)} />
       </label>
