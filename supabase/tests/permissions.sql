@@ -234,4 +234,25 @@ select pg_temp.expect_error('неизвестный вид записи',
 delete from public.notes;
 reset role;
 
+-- ---------------------------------------------------------------- дни занятий
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+select public.mark_study_day();
+select public.mark_study_day();
+select pg_temp.expect_count('день занятий отмечается один раз',
+  'select count(*) from public.study_days', 1);
+select pg_temp.expect_error('ученик отмечает вчерашний день',
+  $q$insert into public.study_days (day) values (current_date - 1)$q$);
+select pg_temp.expect_error('ученик отмечает другого ученика',
+  $q$insert into public.study_days (student_id) values ('00000000-0000-0000-0000-00000000000c')$q$);
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('другой ученик не видит чужие дни',
+  'select count(*) from public.study_days', 0);
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_error('преподаватель отмечает день', 'select public.mark_study_day()');
+reset role;
+set role anon;
+select pg_temp.expect_error('гость отмечает день', 'select public.mark_study_day()');
+reset role;
+
 \echo 'Все проверки прав прошли.'

@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
-import { dueLabel, formatDate, greeting, todayLabel } from "@/lib/format";
+import { addDays, dueLabel, formatDate, greeting, moscowDay, todayLabel } from "@/lib/format";
 import { bucketAssignments, MISTAKE_SELECT, upcoming, type MistakeRow } from "@/lib/student";
 import { isNoteKind, type Assignment, type Note, type Submission, type Topic } from "@/lib/types";
 import { ErrorBanner, Header, StatusPill, TopicStats } from "@/components/ui";
 import { Notebook } from "@/components/notebook";
+import { Streak } from "@/components/streak";
 
 export default async function StudentHome(props: PageProps<"/student">) {
   const { error, kind } = await props.searchParams;
   const { profile, supabase } = await requireRole("student");
 
-  const [{ data: assignments }, { data: submissions }, { data: marks }, { data: topics }, notesRes] = await Promise.all([
+  const today = moscowDay();
+  const [{ data: assignments }, { data: submissions }, { data: marks }, { data: topics }, notesRes, daysRes] = await Promise.all([
     supabase.from("assignments").select("*").order("created_at", { ascending: false }),
     supabase.from("submissions").select("*").eq("student_id", profile.id),
     // RLS отдаёт ученику только пометки к его собственным работам.
@@ -22,6 +24,7 @@ export default async function StudentHome(props: PageProps<"/student">) {
       .order("created_at", { ascending: false }),
     supabase.from("topics").select("*").order("sort_order"),
     supabase.from("notes").select("*").order("created_at", { ascending: false }),
+    supabase.from("study_days").select("day").gte("day", addDays(today, -400)),
   ]);
 
   const subByAssignment = new Map(((submissions ?? []) as Submission[]).map((s) => [s.assignment_id, s]));
@@ -62,6 +65,7 @@ export default async function StudentHome(props: PageProps<"/student">) {
           <h1>{greeting()}!</h1>
           <p className="muted">{todayLabel()}</p>
         </div>
+        {daysRes.error ? null : <Streak days={(daysRes.data ?? []).map((d) => d.day as string)} today={today} />}
         <dl className="tally">
           {tally.map((t) => (
             <div key={t.label}>

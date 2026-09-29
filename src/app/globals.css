@@ -255,3 +255,42 @@ ins { color: var(--stamp-green); text-decoration: none; font: 700 22px/1 var(--h
 .pair { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 18px; }
 .comment { font: 500 21px/1.2 var(--hand); color: var(--blue-ink); }
 
+
+/* Серия занятий: число дней подряд и последняя неделя. */
+.streak { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 18px; padding: 12px 18px; background: var(--sticky-green); box-shadow: var(--shadow); transform: rotate(-1deg); max-width: 380px; }
+.streak-num { display: flex; align-items: center; gap: 8px; }
+.streak-num b { font: 700 52px/0.9 var(--hand); color: var(--stamp-green); }
+.streak-num span { font-size: 14px; line-height: 1.2; font-weight: 700; }
+.week { list-style: none; margin: 0; padding: 0; display: flex; gap: 5px; }
+.week li { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1.5px dashed rgba(42, 38, 34, .35); font-size: 12px; color: var(--muted); }
+.week li.on { border: 0; background: var(--stamp-green); color: #fff; font-weight: 700; }
+.week li:last-child { outline: 2px solid var(--ink); outline-offset: 1px; }
+.streak > p:last-child { grid-column: 1 / -1; }
+@media (max-width: 600px) { .streak { grid-template-columns: 1fr; max-width: none; transform: none; width: 100%; } }
+
+/* Карточки со словами. */
+.fc, .fc-done { display: grid; gap: 18px; max-width: 720px; width: 100%; margin-inline: auto; }
+.fc-bar { display: flex; align-items: center; gap: 14px; }
+.fc-bar .num { font-weight: 700; }
+.fc-progress { flex: 1; height: 4px; background: rgba(42, 38, 34, .15); }
+.fc-progress i { display: block; height: 100%; background: var(--pen); transition: width .2s ease; }
+.fc-card {
+  display: grid; place-items: center; align-content: center; gap: 18px; min-height: 320px; padding: 32px; text-align: center; cursor: pointer;
+  border: 0; border-top: 2px solid var(--margin-line); color: var(--ink);
+  background-color: var(--card); background-image: linear-gradient(transparent 39px, var(--rule) 40px); background-size: 100% 40px; background-position: 0 20px;
+  box-shadow: var(--shadow-lift); transform: rotate(-.6deg); transition: transform .15s ease;
+}
+.fc-card:hover { transform: rotate(0); }
+.fc-front { font: 700 clamp(40px, 7vw, 64px)/1.05 var(--hand); overflow-wrap: anywhere; }
+.fc-back { font: 26px/1.3 var(--serif); color: var(--blue-ink); overflow-wrap: anywhere; }
+.fc-hint { font-size: 14px; color: var(--faint); }
+.fc-card.flipped { background-color: #fffef9; }
+.fc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.fc-actions .btn { padding: 14px; font-size: 17px; }
+.fc-no { color: var(--pen); border-color: var(--pen); }
+.fc-yes { color: var(--stamp-green); border-color: var(--stamp-green); }
+.fc-done { padding: 28px; background: var(--card); box-shadow: var(--shadow-lift); }
+.fc-score { font-size: 22px; }
+.fc-score b { font: 700 72px/1 var(--hand); color: var(--stamp-green); }
+.fc-missed { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 18px; }
+@media (prefers-reduced-motion: reduce) { .fc-card, .fc-progress i { transition: none; } }

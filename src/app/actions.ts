@@ -238,6 +238,20 @@ function topicError(code: string | undefined, message: string): string {
 // Ученик
 // ---------------------------------------------------------------------------
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+// Отмечает сегодняшний день занятий. Ошибка здесь не должна мешать основному действию.
+async function touchStudyDay(supabase: Supabase) {
+  await supabase.rpc("mark_study_day");
+}
+
+// Вызывается из тренировки карточек.
+export async function markStudyDay() {
+  const { supabase } = await requireRole("student");
+  await touchStudyDay(supabase);
+  revalidatePath("/student");
+}
+
 export async function submitWork(assignmentId: string, form: FormData) {
   const { supabase, profile } = await requireRole("student");
   const path = `/student/assignments/${assignmentId}`;
@@ -248,6 +262,7 @@ export async function submitWork(assignmentId: string, form: FormData) {
     .from("submissions")
     .insert({ assignment_id: assignmentId, student_id: profile.id, body });
   if (error) fail(path, `Работа не отправлена: ${error.message}`);
+  await touchStudyDay(supabase);
   revalidatePath(path);
   revalidatePath("/student");
   redirect(path);
@@ -273,6 +288,7 @@ export async function sendFixes(assignmentId: string, submissionId: string, form
     .update({ status: "fixed" })
     .eq("id", submissionId);
   if (error) fail(path, `Работа не отправлена: ${error.message}`);
+  await touchStudyDay(supabase);
   revalidatePath(path);
   revalidatePath("/student");
   redirect(path);
@@ -296,6 +312,7 @@ export async function addNote(form: FormData) {
   const { supabase } = await requireRole("student");
   const { error } = await supabase.from("notes").insert(noteFields(form));
   if (error) fail("/student", `Запись не сохранена: ${error.message}`);
+  await touchStudyDay(supabase);
   revalidatePath("/student");
   redirect("/student#notebook");
 }
@@ -304,6 +321,7 @@ export async function updateNote(noteId: string, form: FormData) {
   const { supabase } = await requireRole("student");
   const { error } = await supabase.from("notes").update(noteFields(form)).eq("id", noteId);
   if (error) fail("/student", `Запись не сохранена: ${error.message}`);
+  await touchStudyDay(supabase);
   revalidatePath("/student");
   redirect("/student#notebook");
 }

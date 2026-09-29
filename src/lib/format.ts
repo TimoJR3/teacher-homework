@@ -58,3 +58,18 @@ export function dueLabel(iso: string, now = new Date()): { text: string; late: b
   if (days === 1) return { text: "завтра", late: false };
   return { text: `через ${days} ${plural(days, "день", "дня", "дней")}`, late: false };
 }
+
+// Дата «YYYY-MM-DD» по московскому календарю.
+export function moscowDay(d = new Date()): string {
+  return dueInputValue(d.toISOString());
+}
+
+// Сдвиг даты «YYYY-MM-DD» на n дней.
+export function addDays(day: string, n: number): string {
+  return new Date(Date.parse(`${day}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
+}
+
+// «пн», «вт»… для даты «YYYY-MM-DD».
+export function weekdayShort(day: string): string {
+  return new Intl.DateTimeFormat("ru-RU", { weekday: "short", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+}
