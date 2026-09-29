@@ -319,4 +319,76 @@ select pg_temp.expect_error('страница несуществующей кн�
 reset role;
 delete from storage.objects where bucket_id = 'books';
 
+-- ---------------------------------------------------------------- аудит: попытки обойти сайт через API
+set role authenticated;
+set request.jwt.claim.sub = :'teacher';
+select public.create_assignment('Аудит', '', null,
+  array['00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c']::uuid[]) as audit_id \gset
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученица сдаёт работу от имени другого',
+  format($q$insert into public.submissions (assignment_id, student_id, body) values (%L, '00000000-0000-0000-0000-00000000000c', 'x')$q$, :'audit_id'));
+select pg_temp.expect_error('слишком длинный ответ',
+  format($q$insert into public.submissions (assignment_id, body) values (%L, repeat('a', 20001))$q$, :'audit_id'));
+insert into public.submissions (assignment_id, body) values (:'audit_id', 'She go to school') returning id as audit_sub \gset
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_error('слишком длинный комментарий',
+  format($q$insert into public.marks (submission_id, start_offset, end_offset, quote, topic_id, comment)
+     select %L, 4, 6, 'go', id, repeat('x', 1001) from public.topics limit 1$q$, :'audit_sub'));
+insert into public.marks (submission_id, start_offset, end_offset, quote, topic_id, comment)
+  select :'audit_sub', 4, 6, 'go', id, 'goes' from public.topics limit 1;
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('ученица не видит пометок, пока работу проверяют',
+  format('select count(*) from public.marks where submission_id = %L', :'audit_sub'), 0);
+delete from public.submissions where id = :'audit_sub';
+select pg_temp.expect_error('ученица добавляет тему', $q$insert into public.topics (name) values ('hack')$q$);
+update public.assignments set title = 'hack' where id = :'audit_id';
+update public.profiles set full_name = 'hack' where id = '00000000-0000-0000-0000-00000000000c';
+select pg_temp.expect_error('слишком длинное имя',
+  $q$update public.profiles set full_name = repeat('я', 101) where id = auth.uid()$q$);
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('другой ученик не видит чужих пометок',
+  format('select count(*) from public.marks where submission_id = %L', :'audit_sub'), 0);
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_count('ученица не удалила свою работу',
+  format('select count(*) from public.submissions where id = %L', :'audit_sub'), 1);
+select pg_temp.expect_count('ученица не переименовала задание',
+  format($q$select count(*) from public.assignments where id = %L and title = 'Аудит'$q$, :'audit_id'), 1);
+select pg_temp.expect_count('ученица не переименовала другого ученика',
+  $q$select count(*) from public.profiles where full_name = 'hack'$q$, 0);
+select pg_temp.expect_error('слишком длинное название задания',
+  $q$select public.create_assignment(repeat('x', 201), '', null, null)$q$);
+update public.submissions set status = 'returned' where id = :'audit_sub';
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('после проверки ученица видит пометку',
+  format('select count(*) from public.marks where submission_id = %L', :'audit_sub'), 1);
+delete from public.marks where submission_id = :'audit_sub';
+select pg_temp.expect_error('слишком длинное исправление',
+  format($q$update public.marks set student_fix = repeat('x', 1001) where submission_id = %L$q$, :'audit_sub'));
+select pg_temp.expect_count('ученица не удалила пометку',
+  format('select count(*) from public.marks where submission_id = %L', :'audit_sub'), 1);
+update public.marks set student_fix = 'goes' where submission_id = :'audit_sub';
+update public.submissions set status = 'fixed' where id = :'audit_sub';
+set request.jwt.claim.sub = :'teacher';
+update public.submissions set status = 'accepted' where id = :'audit_sub';
+select pg_temp.expect_error('пометка к принятой работе',
+  format($q$insert into public.marks (submission_id, start_offset, end_offset, quote, topic_id)
+     select %L, 0, 3, 'She', id from public.topics limit 1$q$, :'audit_sub'));
+insert into storage.objects (bucket_id, name) values ('books', 'my-book/2.jpg');
+set request.jwt.claim.sub = :'anya';
+delete from storage.objects where bucket_id = 'books';
+update storage.objects set name = 'my-book/3.jpg' where bucket_id = 'books';
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_count('ученица не удалила и не переименовала страницу',
+  $q$select count(*) from storage.objects where bucket_id = 'books' and name = 'my-book/2.jpg'$q$, 1);
+reset role;
+delete from storage.objects where bucket_id = 'books';
+set role anon;
+select pg_temp.expect_error('гость читает задания', 'select count(*) from public.assignments');
+select pg_temp.expect_error('гость читает профили', 'select count(*) from public.profiles');
+reset role;
+insert into auth.users values ('00000000-0000-0000-0000-0000000000f1', 'long@x.ru',
+  jsonb_build_object('full_name', repeat('я', 5000)));
+select pg_temp.expect_count('регистрация с очень длинным именем обрезает имя',
+  $q$select char_length(full_name) from public.profiles where email = 'long@x.ru'$q$, 100);
+
 \echo 'Все проверки прав прошли.'

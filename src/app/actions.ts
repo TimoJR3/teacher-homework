@@ -10,6 +10,7 @@ import { isValidRange, overlaps } from "@/lib/text";
 import { isNoteKind } from "@/lib/types";
 import { MATERIALS_BUCKET } from "@/lib/materials";
 import { parsePages } from "@/lib/books";
+import { LIMITS } from "@/lib/limits";
 
 function str(form: FormData, key: string): string {
   const v = form.get(key);
@@ -18,6 +19,11 @@ function str(form: FormData, key: string): string {
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+// Останавливает действие с понятной ошибкой, если текст длиннее допустимого.
+function tooLong(path: string, value: string, max: number, what: string) {
+  if (value.length > max) fail(path, `${what} длиннее ${max} символов, сократите.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -41,6 +47,7 @@ export async function signUp(form: FormData) {
   const password = str(form, "password");
   if (password.length < 8) fail(page, "Пароль должен быть не короче 8 символов.");
 
+  tooLong(page, str(form, "full_name"), LIMITS.fullName, "Имя");
   const data: Record<string, string> = { full_name: str(form, "full_name") };
   if (role === "teacher") {
     const code = str(form, "teacher_code");
@@ -86,6 +93,8 @@ export async function createAssignment(form: FormData) {
   const { supabase } = await requireRole("teacher");
   const fields = assignmentFields(form);
   if (!fields.p_title) fail("/teacher", "Укажите название задания.");
+  tooLong("/teacher", fields.p_title, LIMITS.title, "Название");
+  tooLong("/teacher", fields.p_description, LIMITS.description, "Описание задания");
 
   // Задание и список учеников создаются в базе одной операцией.
   const { data: id, error } = await supabase.rpc("create_assignment", fields);
@@ -105,6 +114,8 @@ export async function updateAssignment(assignmentId: string, form: FormData) {
   const path = `/teacher/assignments/${assignmentId}`;
   const fields = assignmentFields(form);
   if (!fields.p_title) fail(path, "Укажите название задания.");
+  tooLong(path, fields.p_title, LIMITS.title, "Название");
+  tooLong(path, fields.p_description, LIMITS.description, "Описание задания");
 
   const { error } = await supabase.rpc("update_assignment", { p_id: assignmentId, ...fields });
   if (error) fail(path, `Изменения не сохранены: ${error.message}`);
@@ -188,6 +199,7 @@ export async function addMark(submissionId: string, form: FormData) {
   const end = Number(str(form, "end"));
   const topicId = str(form, "topic_id");
   if (!topicId) fail(path, "Выберите тему ошибки.");
+  tooLong(path, str(form, "comment"), LIMITS.comment, "Комментарий");
 
   const { data: sub } = await supabase
     .from("submissions")
@@ -267,6 +279,8 @@ export async function addTopic(form: FormData) {
   const { supabase } = await requireRole("teacher");
   const fields = topicFields(form);
   if (!fields.name) fail("/teacher/topics", "Укажите название темы.");
+  tooLong("/teacher/topics", fields.name, LIMITS.topicName, "Название темы");
+  tooLong("/teacher/topics", fields.rule, LIMITS.topicRule, "Правило");
   const { error } = await supabase.from("topics").insert(fields);
   if (error) fail("/teacher/topics", topicError(error.code, error.message));
   revalidatePath("/teacher/topics");
@@ -277,6 +291,8 @@ export async function saveTopic(topicId: string, form: FormData) {
   const { supabase } = await requireRole("teacher");
   const fields = topicFields(form);
   if (!fields.name) fail("/teacher/topics", "Название темы не может быть пустым.");
+  tooLong("/teacher/topics", fields.name, LIMITS.topicName, "Название темы");
+  tooLong("/teacher/topics", fields.rule, LIMITS.topicRule, "Правило");
   const { error } = await supabase.from("topics").update(fields).eq("id", topicId);
   if (error) fail("/teacher/topics", topicError(error.code, error.message));
   revalidatePath("/teacher/topics");
@@ -320,6 +336,7 @@ export async function submitWork(assignmentId: string, form: FormData) {
   const path = `/student/assignments/${assignmentId}`;
   const body = str(form, "body");
   if (!body) fail(path, "Текст работы пустой.");
+  tooLong(path, body, LIMITS.submission, "Текст работы");
 
   const { error } = await supabase
     .from("submissions")
@@ -341,6 +358,7 @@ export async function sendFixes(assignmentId: string, submissionId: string, form
     .eq("submission_id", submissionId);
   const fixes = (marks ?? []).map((m) => ({ id: m.id, fix: str(form, `fix_${m.id}`) }));
   if (fixes.some((f) => !f.fix)) fail(path, "Напишите исправление к каждой пометке.");
+  for (const f of fixes) tooLong(path, f.fix, LIMITS.fix, "Исправление");
 
   for (const f of fixes) {
     const { error } = await supabase.from("marks").update({ student_fix: f.fix }).eq("id", f.id);
