@@ -308,6 +308,14 @@ select pg_temp.expect_error('ученица загружает страницу'
 set request.jwt.claim.sub = :'max';
 select pg_temp.expect_count('ученик без задания не видит страниц',
   $q$select count(*) from storage.objects where bucket_id = 'books'$q$, 0);
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученица добавляет учебник',
+  $q$insert into public.books (id, title, pages) values ('x', 'x', 1)$q$);
+set request.jwt.claim.sub = :'teacher';
+insert into public.books (id, title, pages) values ('my-book', 'Моя книга', 10);
+insert into storage.objects (bucket_id, name) values ('books', 'my-book/1.jpg');
+select pg_temp.expect_error('страница несуществующей книги',
+  $q$insert into storage.objects (bucket_id, name) values ('books', 'nobook/1.jpg')$q$);
 reset role;
 delete from storage.objects where bucket_id = 'books';
 

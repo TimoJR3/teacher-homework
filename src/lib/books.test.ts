@@ -22,3 +22,17 @@ test("pagesLabel и путь страницы", () => {
   assert.equal(pagesLabel([]), "");
   assert.equal(bookPagePath("ef-pre-sb", 14), "ef-pre-sb/14.jpg");
 });
+
+test("importPlan: сдвиг нумерации и предел книги", async () => {
+  const { importPlan, newBookId } = await import("./books.ts");
+  assert.deepEqual(importPlan(4, 1, 168), [
+    { pdf: 2, page: 1 },
+    { pdf: 3, page: 2 },
+    { pdf: 4, page: 3 },
+  ]);
+  assert.deepEqual(importPlan(5, 0, 2), [
+    { pdf: 1, page: 1 },
+    { pdf: 2, page: 2 },
+  ]);
+  assert.match(newBookId(0), /^book-[a-z0-9]+$/);
+});

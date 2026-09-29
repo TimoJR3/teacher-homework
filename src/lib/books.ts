@@ -3,7 +3,7 @@
 export const BOOKS_BUCKET = "books";
 export const MAX_PAGES_AT_ONCE = 10;
 
-export type Book = { id: string; title: string; pages: number; contents_page: number };
+export type Book = { id: string; title: string; pages: number; contents_page: number; pdf_offset: number };
 export type AssignmentPage = { assignment_id: string; book_id: string; page: number };
 
 export function bookPagePath(bookId: string, page: number): string {
@@ -40,4 +40,19 @@ export function pagesLabel(pages: number[]): string {
     i = j;
   }
   return parts.length ? `с. ${parts.join(", ")}` : "";
+}
+
+// Какие страницы PDF загружать и под какими номерами: страница книги N = страница PDF N + offset.
+export function importPlan(pdfPages: number, offset: number, bookPages: number): { pdf: number; page: number }[] {
+  const plan: { pdf: number; page: number }[] = [];
+  for (let pdf = offset + 1; pdf <= pdfPages; pdf++) {
+    const page = pdf - offset;
+    if (page > bookPages) break;
+    plan.push({ pdf, page });
+  }
+  return plan;
+}
+
+export function newBookId(now = Date.now()): string {
+  return `book-${now.toString(36)}`;
 }
