@@ -3,6 +3,7 @@ import { signOut } from "@/app/actions";
 import { countTopics, segment } from "@/lib/text";
 import { STATUS_LABEL, type Mark, type Profile, type Status, type Topic } from "@/lib/types";
 import { displayName } from "@/lib/format";
+import { safeMessage } from "@/lib/limits";
 
 const NAV = {
   teacher: [
@@ -70,7 +71,7 @@ export function StatusPill({ status }: { status: Status | null }) {
 }
 
 export function ErrorBanner({ error }: { error?: string | string[] }) {
-  const msg = Array.isArray(error) ? error[0] : error;
+  const msg = safeMessage(Array.isArray(error) ? error[0] : error);
   if (!msg) return null;
   return (
     <p className="banner" role="alert">
