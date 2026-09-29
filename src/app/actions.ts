@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { authErrorText } from "@/lib/auth-errors";
 import { dueAtFromInput } from "@/lib/format";
 import { isValidRange, overlaps } from "@/lib/text";
+import { isNoteKind } from "@/lib/types";
 
 function str(form: FormData, key: string): string {
   const v = form.get(key);
@@ -283,16 +284,17 @@ export async function sendFixes(assignmentId: string, submissionId: string, form
 
 const NOTE_MAX = 5000;
 
-function noteBody(form: FormData): string {
+function noteFields(form: FormData) {
   const body = str(form, "body");
   if (!body) fail("/student", "Запись пустая.");
   if (body.length > NOTE_MAX) fail("/student", `Запись длиннее ${NOTE_MAX} символов, разбейте её на несколько.`);
-  return body;
+  const kind = str(form, "kind");
+  return { body, kind: isNoteKind(kind) ? kind : "note" };
 }
 
 export async function addNote(form: FormData) {
   const { supabase } = await requireRole("student");
-  const { error } = await supabase.from("notes").insert({ body: noteBody(form) });
+  const { error } = await supabase.from("notes").insert(noteFields(form));
   if (error) fail("/student", `Запись не сохранена: ${error.message}`);
   revalidatePath("/student");
   redirect("/student#notebook");
@@ -300,7 +302,7 @@ export async function addNote(form: FormData) {
 
 export async function updateNote(noteId: string, form: FormData) {
   const { supabase } = await requireRole("student");
-  const { error } = await supabase.from("notes").update({ body: noteBody(form) }).eq("id", noteId);
+  const { error } = await supabase.from("notes").update(noteFields(form)).eq("id", noteId);
   if (error) fail("/student", `Запись не сохранена: ${error.message}`);
   revalidatePath("/student");
   redirect("/student#notebook");
