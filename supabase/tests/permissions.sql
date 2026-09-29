@@ -287,4 +287,36 @@ delete from storage.objects where bucket_id = 'materials';
 select pg_temp.expect_count('преподаватель удаляет материалы', 'select count(*) from storage.objects', 0);
 reset role;
 
+-- ---------------------------------------------------------------- страницы учебника
+-- Страницы загружает администратор, здесь кладём их напрямую.
+insert into storage.objects (bucket_id, name) values ('books', 'ef-pre-sb/14.jpg'), ('books', 'ef-pre-sb/15.jpg');
+set role authenticated;
+set request.jwt.claim.sub = :'teacher';
+select public.create_assignment('Unit 2A', '', null, array['00000000-0000-0000-0000-00000000000b']::uuid[]) as book_task \gset
+insert into public.assignment_pages (assignment_id, book_id, page) values (:'book_task', 'ef-pre-sb', 14);
+select pg_temp.expect_error('страница за пределами книги',
+  format($q$insert into public.assignment_pages (assignment_id, book_id, page) values (%L, 'ef-pre-sb', 500)$q$, :'book_task'));
+select pg_temp.expect_count('преподаватель видит весь учебник',
+  $q$select count(*) from storage.objects where bucket_id = 'books'$q$, 2);
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('ученица видит только страницу из задания',
+  $q$select count(*) from storage.objects where bucket_id = 'books'$q$, 1);
+select pg_temp.expect_error('ученица добавляет страницу',
+  format($q$insert into public.assignment_pages (assignment_id, book_id, page) values (%L, 'ef-pre-sb', 15)$q$, :'book_task'));
+select pg_temp.expect_error('ученица загружает страницу',
+  $q$insert into storage.objects (bucket_id, name) values ('books', 'ef-pre-sb/99.jpg')$q$);
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('ученик без задания не видит страниц',
+  $q$select count(*) from storage.objects where bucket_id = 'books'$q$, 0);
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученица добавляет учебник',
+  $q$insert into public.books (id, title, pages) values ('x', 'x', 1)$q$);
+set request.jwt.claim.sub = :'teacher';
+insert into public.books (id, title, pages) values ('my-book', 'Моя книга', 10);
+insert into storage.objects (bucket_id, name) values ('books', 'my-book/1.jpg');
+select pg_temp.expect_error('страница несуществующей книги',
+  $q$insert into storage.objects (bucket_id, name) values ('books', 'nobook/1.jpg')$q$);
+reset role;
+delete from storage.objects where bucket_id = 'books';
+
 \echo 'Все проверки прав прошли.'

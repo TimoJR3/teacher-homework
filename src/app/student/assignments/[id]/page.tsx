@@ -58,10 +58,15 @@ export default async function AssignmentPage(props: PageProps<"/student/assignme
           <StatusPill status={sub?.status ?? null} />
         </div>
         {a.description ? <p style={{ whiteSpace: "pre-wrap" }}>{a.description}</p> : null}
-        {a.textbook || materials.items.length ? (
+        {a.textbook || materials.items.length || materials.bookPages.length ? (
           <section className="stack material-box">
             <h2>Материалы</h2>
-            <Materials textbook={a.textbook} items={materials.items} assignmentId={a.id} />
+            <Materials
+              textbook={a.textbook}
+              items={materials.items}
+              bookPages={materials.bookPages}
+              assignmentId={a.id}
+            />
           </section>
         ) : null}
 

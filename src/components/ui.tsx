@@ -7,6 +7,7 @@ import { displayName } from "@/lib/format";
 const NAV = {
   teacher: [
     { href: "/teacher", label: "Работы" },
+    { href: "/teacher/books", label: "Учебники" },
     { href: "/teacher/topics", label: "Темы ошибок" },
   ],
   student: [
