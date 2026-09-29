@@ -9,6 +9,7 @@ import { dueAtFromInput } from "@/lib/format";
 import { isValidRange, overlaps } from "@/lib/text";
 import { isNoteKind } from "@/lib/types";
 import { MATERIALS_BUCKET } from "@/lib/materials";
+import { parsePages } from "@/lib/books";
 
 function str(form: FormData, key: string): string {
   const v = form.get(key);
@@ -140,6 +141,41 @@ export async function deleteMaterial(assignmentId: string, materialId: string) {
   const { error } = await supabase.from("materials").delete().eq("id", materialId);
   if (error) fail(path, `Файл не убран: ${error.message}`);
   await supabase.storage.from(MATERIALS_BUCKET).remove([m.path as string]);
+  revalidatePath(path);
+  revalidatePath(`/student/assignments/${assignmentId}`);
+  redirect(path);
+}
+
+export async function addBookPages(assignmentId: string, form: FormData) {
+  const { supabase } = await requireRole("teacher");
+  const path = `/teacher/assignments/${assignmentId}`;
+  // Со страницы учебника возвращаемся туда же, чтобы листать дальше.
+  const back = str(form, "back").startsWith("/teacher/books/") ? str(form, "back") : path;
+  const bookId = str(form, "book_id");
+  const { data: book } = await supabase.from("books").select("pages").eq("id", bookId).maybeSingle();
+  if (!book) fail(back, "Учебник не найден.");
+  const parsed = parsePages(str(form, "pages"), book.pages as number);
+  if ("error" in parsed) fail(back, parsed.error);
+  const { error } = await supabase
+    .from("assignment_pages")
+    .upsert(
+      parsed.pages.map((page) => ({ assignment_id: assignmentId, book_id: bookId, page })),
+      { onConflict: "assignment_id,book_id,page", ignoreDuplicates: true },
+    );
+  if (error) fail(back, `Страницы не добавлены: ${error.message}`);
+  revalidatePath(path);
+  revalidatePath(`/student/assignments/${assignmentId}`);
+  redirect(back);
+}
+
+export async function removeBookPage(assignmentId: string, bookId: string, page: number) {
+  const { supabase } = await requireRole("teacher");
+  const path = `/teacher/assignments/${assignmentId}`;
+  const { error } = await supabase
+    .from("assignment_pages")
+    .delete()
+    .match({ assignment_id: assignmentId, book_id: bookId, page });
+  if (error) fail(path, `Страница не убрана: ${error.message}`);
   revalidatePath(path);
   revalidatePath(`/student/assignments/${assignmentId}`);
   redirect(path);
