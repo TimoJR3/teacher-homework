@@ -294,3 +294,32 @@ ins { color: var(--stamp-green); text-decoration: none; font: 700 22px/1 var(--h
 .fc-score b { font: 700 72px/1 var(--hand); color: var(--stamp-green); }
 .fc-missed { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { .fc-card, .fc-progress i { transition: none; } }
+
+/* ---------------------------------------------------------------- материалы к заданию */
+.material-box { background: var(--card); border: 1px solid rgba(42, 38, 34, .18); border-radius: 3px; padding: 18px 20px; box-shadow: 0 2px 0 rgba(42, 38, 34, .12); }
+.material-box h2 { margin: 0; }
+.materials { display: grid; gap: 16px; }
+.textbook { display: grid; gap: 2px; margin: 0; font-size: 18px; font-weight: 700; padding-left: 12px; border-left: 4px solid var(--stamp-blue); }
+.pages { list-style: none; margin: 0; padding: 6px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 22px 18px; }
+@media (max-width: 600px) { .pages { grid-template-columns: 1fr 1fr; } }
+.pages li { position: relative; display: grid; gap: 6px; justify-items: start; }
+.pages li:nth-child(odd) a { transform: rotate(-1deg); }
+.pages li:nth-child(even) a { transform: rotate(.8deg); }
+.pages a { position: relative; display: block; width: 100%; background: #fff; padding: 6px; box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 6px 14px -6px rgba(42, 38, 34, .45); transition: transform .15s; }
+.pages a:hover { transform: rotate(0) scale(1.02); }
+.pages a::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; margin-left: -32px; background: rgba(243, 234, 210, .85); border: 1px solid rgba(42, 38, 34, .12); transform: rotate(-3deg); }
+.pages .cap { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; width: 100%; }
+.pages .cap span { overflow-wrap: anywhere; }
+.pages img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; }
+.files { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.files li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--card-dim); border: 1px solid rgba(42, 38, 34, .14); border-radius: 3px; }
+.files li a { font-weight: 700; overflow-wrap: anywhere; }
+.files li form { margin-left: auto; }
+.ext { flex: none; font-size: 12px; font-weight: 700; color: #fff; background: var(--stamp-red); padding: 3px 6px; border-radius: 2px; letter-spacing: .04em; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--stamp-red); text-decoration: underline; cursor: pointer; font: inherit; }
+.upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.upload input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.upload label.btn { position: relative; }
+.upload label.btn:focus-within { outline: 2px solid var(--stamp-blue); outline-offset: 2px; }
+.upload label.btn.disabled { opacity: .6; cursor: default; }
+.upload-error { flex-basis: 100%; margin: 0; color: var(--stamp-red); }
