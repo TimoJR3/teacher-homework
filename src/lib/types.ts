@@ -38,4 +38,15 @@ export const STATUS_LABEL: Record<Status, string> = {
   fixed: "Исправлено",
   accepted: "Принято",
 };
-export type Note = { id: string; student_id: string; body: string; created_at: string; updated_at: string };
+export type NoteKind = "rule" | "word" | "note";
+export type Note = { id: string; student_id: string; kind: NoteKind; body: string; created_at: string; updated_at: string };
+
+export const NOTE_KINDS: { kind: NoteKind; label: string; many: string }[] = [
+  { kind: "rule", label: "Правило", many: "Правила" },
+  { kind: "word", label: "Слово", many: "Слова" },
+  { kind: "note", label: "Заметка", many: "Заметки" },
+];
+
+export function isNoteKind(v: string): v is NoteKind {
+  return NOTE_KINDS.some((k) => k.kind === v);
+}

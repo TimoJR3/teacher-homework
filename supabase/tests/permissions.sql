@@ -220,4 +220,18 @@ insert into auth.users values ('00000000-0000-0000-0000-0000000000e1', 'after-re
 select pg_temp.expect_count('регистрация работает после закрытия функций',
   $q$select count(*) from public.profiles where email = 'after-revoke@x.ru' and role = 'student'$q$, 1);
 
+-- ---------------------------------------------------------------- виды записей в блокноте
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+insert into public.notes (body, kind) values ('apple — яблоко', 'word');
+select pg_temp.expect_count('запись со словом сохраняется',
+  $q$select count(*) from public.notes where kind = 'word'$q$, 1);
+insert into public.notes (body) values ('просто заметка');
+select pg_temp.expect_count('вид по умолчанию — заметка',
+  $q$select count(*) from public.notes where body = 'просто заметка' and kind = 'note'$q$, 1);
+select pg_temp.expect_error('неизвестный вид записи',
+  $q$insert into public.notes (body, kind) values ('x', 'secret')$q$);
+delete from public.notes;
+reset role;
+
 \echo 'Все проверки прав прошли.'
