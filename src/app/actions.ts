@@ -10,6 +10,7 @@ import { isValidRange, overlaps } from "@/lib/text";
 import { isNoteKind } from "@/lib/types";
 import { MATERIALS_BUCKET } from "@/lib/materials";
 import { parsePages } from "@/lib/books";
+import { clampPage } from "@/lib/board";
 import { LIMITS } from "@/lib/limits";
 
 function str(form: FormData, key: string): string {
@@ -177,6 +178,50 @@ export async function addBookPages(assignmentId: string, form: FormData) {
   revalidatePath(path);
   revalidatePath(`/student/assignments/${assignmentId}`);
   redirect(back);
+}
+
+// ---------------------------------------------------------------------------
+// Доска для занятия
+// ---------------------------------------------------------------------------
+
+export async function createBoard(form: FormData) {
+  const { supabase } = await requireRole("teacher");
+  const path = "/teacher/boards";
+  const studentId = str(form, "student_id");
+  const bookId = str(form, "book_id") || null;
+  const title = str(form, "title") || "Занятие";
+  tooLong(path, title, LIMITS.title, "Название");
+  if (!studentId) fail(path, "Выберите ученика.");
+
+  let page = 1;
+  if (bookId) {
+    const { data: book } = await supabase.from("books").select("pages, contents_page").eq("id", bookId).maybeSingle();
+    if (!book) fail(path, "Учебник не найден.");
+    page = clampPage(Number(str(form, "page")) || (book.contents_page as number), book.pages as number);
+  }
+
+  const { data, error } = await supabase
+    .from("boards")
+    .insert({ title, student_id: studentId, book_id: bookId, page })
+    .select("id")
+    .single();
+  if (error || !data) fail(path, `Доска не создана: ${error?.message ?? "нет ответа"}`);
+  if (bookId) {
+    await supabase.from("board_pages").upsert(
+      { board_id: data.id, book_id: bookId, page },
+      { onConflict: "board_id,book_id,page", ignoreDuplicates: true },
+    );
+  }
+  revalidatePath(path);
+  redirect(`/board/${data.id}`);
+}
+
+export async function deleteBoard(boardId: string) {
+  const { supabase } = await requireRole("teacher");
+  const { error } = await supabase.from("boards").delete().eq("id", boardId);
+  if (error) fail("/teacher/boards", `Доска не удалена: ${error.message}`);
+  revalidatePath("/teacher/boards");
+  redirect("/teacher/boards");
 }
 
 export async function removeBookPage(assignmentId: string, bookId: string, page: number) {

@@ -343,3 +343,53 @@ ins { color: var(--stamp-green); text-decoration: none; font: 700 22px/1 var(--h
 .import-progress { display: grid; gap: 4px; }
 .import-progress progress { width: 100%; height: 10px; accent-color: var(--stamp-blue); }
 .book-import select, .book-import input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+/* ---------------------------------------------------------------- доска для занятия */
+.board-page { gap: 10px; }
+.board { display: grid; gap: 12px; min-width: 0; }
+.board-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 24px; }
+.board-title { display: grid; gap: 2px; min-width: 0; }
+.board-title h1 { font-size: clamp(30px, 4vw, 40px); overflow-wrap: anywhere; }
+.board-who { font: 700 21px/1.1 var(--hand); color: var(--faint); }
+.board-who.here { color: var(--stamp-green); }
+.board-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.board-pager select { width: auto; max-width: min(340px, 100%); }
+.board-jump { display: flex; gap: 6px; align-items: center; }
+.board-jump input { width: 76px; }
+.board-follow { display: grid; gap: 0; text-align: right; }
+@media (max-width: 700px) { .board-follow { text-align: left; } }
+
+/* Инструменты лежат полоской бумаги над листом. */
+.board-tools { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 10px; background: var(--tape); box-shadow: var(--shadow); }
+.tool-group { display: flex; align-items: center; gap: 2px; }
+.tool-group + .tool-group { padding-left: 14px; border-left: 1.5px dashed rgba(42, 38, 34, .3); }
+.tool { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 6px 10px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--ink); font-size: 15px; font-weight: 700; cursor: pointer; }
+.tool:hover { background: rgba(255, 253, 246, .7); }
+.tool[aria-pressed="true"] { border-bottom-color: var(--pen); background: var(--card); }
+.tool:disabled { opacity: .4; cursor: default; background: none; }
+.zoom .tool { font-size: 20px; min-width: 38px; justify-content: center; }
+.zoom .num { min-width: 46px; text-align: center; font-size: 14px; color: var(--muted); }
+.inks { gap: 8px; }
+.ink { width: 26px; height: 26px; padding: 0; border: 2px solid var(--card); border-radius: 50%; box-shadow: 0 0 0 1px rgba(42, 38, 34, .35); cursor: pointer; }
+.ink[aria-checked="true"] { box-shadow: 0 0 0 2.5px var(--ink); }
+@media (max-width: 700px) {
+  .board-tools { gap: 4px 10px; padding: 4px 6px; }
+  .tool span { display: none; }
+  .tool-group + .tool-group { padding-left: 8px; }
+}
+
+/* Лист на столе: страница учебника или чистый лист в клетку. */
+.board-stage { height: calc(100dvh - 210px); min-height: 440px; overflow: auto; padding: 14px 6px 28px; overscroll-behavior: contain; }
+.board-sheet { position: relative; margin: 0 auto; background: #fff; box-shadow: var(--shadow-lift); }
+.board-sheet.blank { background-color: #fffef9; background-image: linear-gradient(#d7e4ee 1px, transparent 1px), linear-gradient(90deg, #d7e4ee 1px, transparent 1px); background-size: 2.5% 1.768%; }
+.board-sheet img { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; }
+.board-sheet svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.mode-hand .board-sheet svg { touch-action: auto; cursor: grab; }
+.mode-text .board-sheet svg { cursor: text; }
+.mode-eraser .board-sheet svg { cursor: cell; }
+.board-marker { opacity: .45; mix-blend-mode: multiply; }
+.board-live { opacity: .8; }
+/* Белая обводка под буквами: надпись читается поверх текста учебника. */
+.board-text { font-family: var(--sans); font-weight: 700; user-select: none; paint-order: stroke; stroke: #fffef9; stroke-width: 5px; stroke-linejoin: round; }
+.board-missing { position: absolute; inset: 40% 10% auto; text-align: center; font: 700 26px/1.2 var(--hand); color: var(--faint); }
+.board-input { position: absolute; z-index: 1; min-width: 12ch; padding: 0 2px; border: 0; border-bottom: 2px dashed currentColor; background: rgba(255, 253, 246, .9); font-family: var(--sans); font-weight: 700; line-height: 1.25; outline: none; }
