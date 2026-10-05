@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { flushSync } from "react-dom";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { BOOKS_BUCKET, bookPagePath, type Book } from "@/lib/books";
@@ -133,6 +134,12 @@ export function BoardView({
   const erased = useRef<Set<string>>(new Set());
   const drawing = useRef<Draft | null>(null);
   const typingRef = useRef<Typing | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  // На iPad с Apple Pencil пальцем листают, а рисуют только карандашом (ладонь не оставляет следов).
+  const penSeen = useRef(false);
+  const panFrom = useRef<{ x: number; y: number } | null>(null);
+  const textAt = useRef<Point | null>(null);
 
   const key = sheetKey(sheet);
   const book = sheet.bookId ? (books.find((b) => b.id === sheet.bookId) ?? null) : null;
@@ -381,16 +388,33 @@ export function BoardView({
     });
   };
 
+  // Захват указателя держит линию, даже если палец ушёл за край листа.
+  const capture = (e: ReactPointerEvent<SVGSVGElement>) => {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Указатель уже отпущен — рисуем без захвата.
+    }
+  };
+
   const onDown = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (mode === "hand" || e.button > 0) return;
-    const p = toBoard(e);
-    if (mode === "text") {
-      e.preventDefault();
-      commitText(typing);
-      setTyping({ x: p[0], y: p[1] - TOOL_SIZE.text / 2, value: "" });
+    if (e.button > 0) return;
+    if (e.pointerType === "pen") penSeen.current = true;
+    if (mode === "hand" || (penSeen.current && e.pointerType === "touch")) {
+      // Пальцем по листу в режиме «Листать» браузер прокручивает сам; в остальных случаях двигаем лист вручную.
+      if (mode === "hand" && e.pointerType === "touch") return;
+      capture(e);
+      panFrom.current = { x: e.clientX, y: e.clientY };
       return;
     }
-    e.currentTarget.setPointerCapture(e.pointerId);
+    const p = toBoard(e);
+    if (mode === "text") {
+      // Поле появляется, когда палец или карандаш отпущен: только так iPad открывает клавиатуру.
+      e.preventDefault();
+      textAt.current = p;
+      return;
+    }
+    capture(e);
     if (mode === "eraser") {
       erased.current = new Set();
       eraseAt(p);
@@ -412,6 +436,13 @@ export function BoardView({
   };
 
   const onMove = (e: ReactPointerEvent<SVGSVGElement>) => {
+    const pan = panFrom.current;
+    if (pan) {
+      stageRef.current?.scrollBy(pan.x - e.clientX, pan.y - e.clientY);
+      panFrom.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    if (penSeen.current && e.pointerType === "touch") return;
     if (mode === "eraser" && e.buttons === 1) {
       eraseAt(toBoard(e));
       return;
@@ -433,6 +464,17 @@ export function BoardView({
   };
 
   const onUp = () => {
+    panFrom.current = null;
+    const at = textAt.current;
+    if (at) {
+      textAt.current = null;
+      commitText(typingRef.current);
+      const t = { x: at[0], y: at[1] - TOOL_SIZE.text / 2, value: "" };
+      typingRef.current = t;
+      flushSync(() => setTyping(t));
+      inputRef.current?.focus();
+      return;
+    }
     const d = drawing.current;
     drawing.current = null;
     setMine(null);
@@ -442,6 +484,8 @@ export function BoardView({
   };
 
   const onCancel = () => {
+    panFrom.current = null;
+    textAt.current = null;
     if (drawing.current) send("cancel", { author_id: me.id });
     drawing.current = null;
     setMine(null);
@@ -650,7 +694,7 @@ export function BoardView({
         </p>
       ) : null}
 
-      <div className={`board-stage mode-${mode}`}>
+      <div ref={stageRef} className={`board-stage mode-${mode}`}>
         <div
           ref={sheetEl}
           className={sheet.bookId ? "board-sheet" : "board-sheet blank"}
@@ -706,6 +750,7 @@ export function BoardView({
           {typing ? (
             <input
               className="board-input"
+              ref={inputRef}
               autoFocus
               maxLength={MAX_TEXT}
               value={typing.value}
@@ -714,7 +759,7 @@ export function BoardView({
               style={{
                 left: `${(typing.x / BOARD_WIDTH) * 100}%`,
                 top: `${(typing.y / height) * 100}%`,
-                fontSize: TOOL_SIZE.text * scale,
+                fontSize: Math.max(16, TOOL_SIZE.text * scale),
                 color: ink,
               }}
               onChange={(e) => setTyping({ ...typing, value: e.target.value })}
