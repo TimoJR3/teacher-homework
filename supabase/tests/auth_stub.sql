@@ -23,3 +23,12 @@ alter table storage.objects enable row level security;
 grant usage on schema storage to anon, authenticated;
 grant all on storage.objects to anon, authenticated;
 grant select on storage.buckets to anon, authenticated;
+-- Заглушка Supabase Realtime: сообщения каналов и название текущего канала.
+create schema realtime;
+create table realtime.messages (id bigserial primary key, topic text not null, extension text not null, payload jsonb);
+alter table realtime.messages enable row level security;
+create function realtime.topic() returns text language sql stable as $$ select current_setting('realtime.topic', true) $$;
+grant usage on schema realtime to authenticated;
+grant all on realtime.messages to authenticated;
+grant usage on sequence realtime.messages_id_seq to authenticated;
+grant execute on function realtime.topic() to authenticated;

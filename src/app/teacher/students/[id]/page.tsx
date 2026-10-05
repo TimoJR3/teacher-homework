@@ -45,9 +45,14 @@ export default async function StudentPage(props: PageProps<"/teacher/students/[i
             <p className="eyebrow">{s.email}</p>
             <h1>{displayName(s)}</h1>
           </div>
-          <p className="muted">
-            Принято работ: {done} из {own.length}
-          </p>
+          <div className="row">
+            <p className="muted">
+              Принято работ: {done} из {own.length}
+            </p>
+            <Link className="btn small" href={`/teacher/boards?student=${s.id}`}>
+              Открыть доску для занятия
+            </Link>
+          </div>
 
           <h2>Задания</h2>
           {own.length ? (

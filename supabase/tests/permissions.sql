@@ -391,4 +391,66 @@ insert into auth.users values ('00000000-0000-0000-0000-0000000000f1', 'long@x.r
 select pg_temp.expect_count('регистрация с очень длинным именем обрезает имя',
   $q$select char_length(full_name) from public.profiles where email = 'long@x.ru'$q$, 100);
 
+-- ---------------------------------------------------------------- доска для занятия
+reset role;
+insert into storage.objects (bucket_id, name) values ('books', 'ef-pre-sb/40.jpg'), ('books', 'ef-pre-sb/41.jpg');
+set role authenticated;
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_error('ученица создаёт доску',
+  $q$insert into public.boards (title, student_id) values ('x', auth.uid())$q$);
+set request.jwt.claim.sub = :'teacher';
+select pg_temp.expect_error('доска для преподавателя вместо ученика',
+  $q$insert into public.boards (title, student_id) values ('x', auth.uid())$q$);
+insert into public.boards (title, student_id, book_id, page) values ('Урок', :'anya', 'ef-pre-sb', 40) returning id as board \gset
+insert into public.board_pages (board_id, book_id, page) values (:'board', 'ef-pre-sb', 40);
+select pg_temp.expect_error('страница за пределами книги',
+  format($q$insert into public.board_pages (board_id, book_id, page) values (%L, 'ef-pre-sb', 999)$q$, :'board'));
+insert into public.board_strokes (id, board_id, book_id, page, tool, color, size, points)
+  values ('20000000-0000-0000-0000-000000000001', :'board', 'ef-pre-sb', 40, 'pen', '#c8342c', 4, '[[1,2],[3,4]]');
+set request.jwt.claim.sub = :'anya';
+select pg_temp.expect_count('ученица видит свою доску', 'select count(*) from public.boards', 1);
+select pg_temp.expect_count('ученица видит рисунок преподавателя', 'select count(*) from public.board_strokes', 1);
+select pg_temp.expect_count('ученица видит открытую на доске страницу',
+  $q$select count(*) from storage.objects where bucket_id = 'books' and name like 'ef-pre-sb/4_.jpg'$q$, 1);
+insert into public.board_strokes (id, board_id, book_id, page, tool, color, size, body)
+  values ('20000000-0000-0000-0000-000000000002', :'board', 'ef-pre-sb', 40, 'text', '#1f3a8a', 28, 'went');
+select pg_temp.expect_error('ученица рисует от имени преподавателя',
+  format($q$insert into public.board_strokes (id, board_id, page, author_id, tool, color, size)
+     values (gen_random_uuid(), %L, 1, '00000000-0000-0000-0000-00000000000a', 'pen', '#000000', 4)$q$, :'board'));
+select pg_temp.expect_error('ученица открывает другую страницу учебника',
+  format($q$insert into public.board_pages (board_id, book_id, page) values (%L, 'ef-pre-sb', 41)$q$, :'board'));
+update public.boards set page = 41 where id = :'board';
+delete from public.board_strokes where id = '20000000-0000-0000-0000-000000000001';
+select pg_temp.expect_count('ученица не листает доску и не стирает чужое',
+  format($q$select count(*) from public.boards b join public.board_strokes s on s.board_id = b.id
+     where b.id = %L and b.page = 40 and s.id = '20000000-0000-0000-0000-000000000001'$q$, :'board'), 1);
+select pg_temp.expect_error('слишком длинная надпись',
+  format($q$insert into public.board_strokes (id, board_id, page, tool, color, size, body)
+     values (gen_random_uuid(), %L, 1, 'text', '#000000', 20, repeat('x', 1001))$q$, :'board'));
+select pg_temp.expect_error('неверный цвет',
+  format($q$insert into public.board_strokes (id, board_id, page, tool, color, size)
+     values (gen_random_uuid(), %L, 1, 'pen', 'red', 4)$q$, :'board'));
+select set_config('realtime.topic', 'board:' || :'board', false);
+insert into realtime.messages (topic, extension, payload) values (realtime.topic(), 'broadcast', '{}');
+select pg_temp.expect_count('ученица слышит свою доску', 'select count(*) from realtime.messages', 1);
+set request.jwt.claim.sub = :'max';
+select pg_temp.expect_count('чужой ученик не видит доску', 'select count(*) from public.boards', 0);
+select pg_temp.expect_count('чужой ученик не видит рисунки', 'select count(*) from public.board_strokes', 0);
+select pg_temp.expect_count('чужой ученик не видит страницу с доски',
+  $q$select count(*) from storage.objects where bucket_id = 'books'$q$, 0);
+select pg_temp.expect_count('чужой ученик не слышит доску', 'select count(*) from realtime.messages', 0);
+select pg_temp.expect_error('чужой ученик пишет в канал доски',
+  $q$insert into realtime.messages (topic, extension, payload) values (realtime.topic(), 'broadcast', '{}')$q$);
+select pg_temp.expect_error('чужой ученик рисует на доске',
+  format($q$insert into public.board_strokes (id, board_id, page, tool, color, size)
+     values (gen_random_uuid(), %L, 1, 'pen', '#000000', 4)$q$, :'board'));
+set request.jwt.claim.sub = :'teacher';
+delete from public.board_strokes where id = '20000000-0000-0000-0000-000000000002';
+select pg_temp.expect_count('преподаватель стирает надпись ученицы', 'select count(*) from public.board_strokes', 1);
+reset role;
+set role anon;
+select pg_temp.expect_error('гость читает доски', 'select count(*) from public.boards');
+reset role;
+delete from storage.objects where bucket_id = 'books';
+
 \echo 'Все проверки прав прошли.'

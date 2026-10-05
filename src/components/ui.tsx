@@ -8,11 +8,13 @@ import { safeMessage } from "@/lib/limits";
 const NAV = {
   teacher: [
     { href: "/teacher", label: "Работы" },
+    { href: "/teacher/boards", label: "Доска" },
     { href: "/teacher/books", label: "Учебники" },
     { href: "/teacher/topics", label: "Темы ошибок" },
   ],
   student: [
     { href: "/student", label: "Главная" },
+    { href: "/student/boards", label: "Доска" },
     { href: "/student/mistakes", label: "Мои ошибки" },
     { href: "/student/cards", label: "Карточки" },
     { href: "/student#notebook", label: "Блокнот" },
