@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { BOOKS_BUCKET, bookPagePath, importPlan, newBookId, type Book } from "@/lib/books";
+import { BOOKS_BUCKET, bookPagePath, importPlan, newBookId, pagesInFolder, type Book } from "@/lib/books";
+import { withRetry } from "@/lib/pool";
 
 // Ширина страницы в пикселях: читается на экране, файл остаётся небольшим.
 const PAGE_WIDTH = 1400;
+// Сколько страниц отправляется одновременно. Пока одни уходят в сеть, браузер рисует следующие.
+const PARALLEL_UPLOADS = 4;
 const NEW = "__new__";
 
 type State =
@@ -43,39 +46,66 @@ export function BookImport({ books }: { books: Book[] }) {
         book = fresh;
       }
 
-      const plan = importPlan(doc.numPages, book.pdf_offset, book.pages);
+      // Уже загруженные страницы не рисуем и не отправляем заново: повтор после обрыва докачивает только недостающие.
+      const { data: files } = await supabase.storage.from(BOOKS_BUCKET).list(book.id, { limit: 1000 });
+      const have = pagesInFolder((files ?? []).map((f) => f.name));
+      const all = importPlan(doc.numPages, book.pdf_offset, book.pages);
+      const plan = all.filter((s) => !have.has(s.page));
+      const skipped = all.length - plan.length;
       let uploaded = 0;
-      let skipped = 0;
       let failed = 0;
       let reason = "";
-      for (const [i, step] of plan.entries()) {
-        setState({ kind: "busy", done: i, total: plan.length, note: `Страница ${step.page} из ${book.pages}` });
+      const progress = () =>
+        setState({
+          kind: "busy",
+          done: uploaded + failed,
+          total: plan.length,
+          note: `Загружено ${uploaded} из ${plan.length}`,
+        });
+
+      async function send(page: number, blob: Blob) {
+        const { error } = await withRetry(() =>
+          supabase.storage
+            .from(BOOKS_BUCKET)
+            .upload(bookPagePath(book!.id, page), blob, { contentType: "image/jpeg", upsert: false })
+            .then((r) => {
+              // Сетевой сбой повторяем, а «уже есть» — нет: страница на месте.
+              if (r.error && !/exists|duplicate/i.test(r.error.message)) throw r.error;
+              return r;
+            }),
+        ).catch((error: Error) => ({ error }));
+        if (!error || /exists|duplicate/i.test(error.message)) uploaded++;
+        else {
+          failed++;
+          reason ||= error.message;
+        }
+        progress();
+      }
+
+      progress();
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Браузер не умеет рисовать страницы. Попробуйте Chrome.");
+      const sending = new Set<Promise<void>>();
+      for (const step of plan) {
         const page = await doc.getPage(step.pdf);
         const base = page.getViewport({ scale: 1 });
         const viewport = page.getViewport({ scale: PAGE_WIDTH / base.width });
-        const canvas = document.createElement("canvas");
         canvas.width = Math.round(viewport.width);
         canvas.height = Math.round(viewport.height);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Браузер не умеет рисовать страницы. Попробуйте Chrome.");
         await page.render({ canvasContext: ctx, viewport }).promise;
         page.cleanup();
         const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.75));
         if (!blob) {
           failed++;
+          progress();
           continue;
         }
-        const { error } = await supabase.storage
-          .from(BOOKS_BUCKET)
-          .upload(bookPagePath(book.id, step.page), blob, { contentType: "image/jpeg", upsert: false });
-        // Уже загруженные страницы пропускаем: загрузку можно повторить, если она прервалась.
-        if (!error) uploaded++;
-        else if (/exists|duplicate/i.test(error.message)) skipped++;
-        else {
-          failed++;
-          reason ||= error.message;
-        }
+        const job: Promise<void> = send(step.page, blob).finally(() => sending.delete(job));
+        sending.add(job);
+        if (sending.size >= PARALLEL_UPLOADS) await Promise.race(sending);
       }
+      await Promise.all(sending);
       await task.destroy();
       setState({ kind: "done", uploaded, skipped, failed, reason });
       router.refresh();

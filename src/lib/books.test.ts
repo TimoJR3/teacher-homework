@@ -36,3 +36,8 @@ test("importPlan: сдвиг нумерации и предел книги", asy
   ]);
   assert.match(newBookId(0), /^book-[a-z0-9]+$/);
 });
+
+test("pagesInFolder: номера загруженных страниц", async () => {
+  const { pagesInFolder } = await import("./books.ts");
+  assert.deepEqual([...pagesInFolder(["1.jpg", "14.jpg", ".emptyFolderPlaceholder", "x.jpg", "2.png"])], [1, 14]);
+});

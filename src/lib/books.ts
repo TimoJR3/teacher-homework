@@ -56,3 +56,13 @@ export function importPlan(pdfPages: number, offset: number, bookPages: number):
 export function newBookId(now = Date.now()): string {
   return `book-${now.toString(36)}`;
 }
+
+// Номера уже загруженных страниц по именам файлов в папке книги: «14.jpg» → 14.
+export function pagesInFolder(names: string[]): Set<number> {
+  const pages = new Set<number>();
+  for (const name of names) {
+    const m = name.match(/^(\d+)\.jpg$/);
+    if (m) pages.add(Number(m[1]));
+  }
+  return pages;
+}
