@@ -4,6 +4,8 @@ import { countTopics, segment } from "@/lib/text";
 import { STATUS_LABEL, type Mark, type Profile, type Status, type Topic } from "@/lib/types";
 import { displayName } from "@/lib/format";
 import { safeMessage } from "@/lib/limits";
+import { SubmitButton } from "@/components/submit-button";
+import { NavLinks } from "@/components/nav-links";
 
 const NAV = {
   teacher: [
@@ -37,13 +39,7 @@ export function Header({ profile }: { profile: Profile }) {
       <Link href={home} className="brand">
         Тетрадь с пометками
       </Link>
-      <nav className="nav" aria-label="Разделы">
-        {NAV[profile.role].map((l) => (
-          <Link key={l.href} href={l.href}>
-            {l.label}
-          </Link>
-        ))}
-      </nav>
+      <NavLinks links={NAV[profile.role]} />
       <div className="user">
         <span className="avatar" aria-hidden="true">
           {initials(name)}
@@ -53,14 +49,14 @@ export function Header({ profile }: { profile: Profile }) {
           <small>{profile.role === "teacher" ? "преподаватель" : "ученик"}</small>
         </span>
         <form action={signOut}>
-          <button className="logout" type="submit" title="Выйти из аккаунта">
+          <SubmitButton className="logout" title="Выйти из аккаунта">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
               <path d="M10 17l-5-5 5-5" />
               <path d="M5 12h11" />
             </svg>
             Выйти
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </header>

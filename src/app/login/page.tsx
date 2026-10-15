@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { signIn } from "@/app/actions";
 import { ErrorBanner } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function LoginPage(props: PageProps<"/login">) {
-  const { error } = await props.searchParams;
+  const { error, confirmed } = await props.searchParams;
   return (
     <main className="stack auth">
       <h1>Тетрадь с пометками</h1>
       <p className="muted">Задания, проверка работ и темы, которые стоит повторить.</p>
       <ErrorBanner error={error} />
+      {confirmed ? (
+        <p className="notice" role="status">
+          Почта подтверждена. Войдите с почтой и паролем, которые указали при регистрации.
+        </p>
+      ) : null}
 
       <form action={signIn} className="panel">
         <h2>Вход</h2>
@@ -20,9 +26,9 @@ export default async function LoginPage(props: PageProps<"/login">) {
           Пароль
           <input type="password" name="password" id="login-password" required autoComplete="current-password" />
         </label>
-        <button className="btn primary" type="submit">
+        <SubmitButton className="btn primary" pendingText="Вхожу…">
           Войти
-        </button>
+        </SubmitButton>
       </form>
 
       <section className="stack">

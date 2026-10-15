@@ -3,6 +3,7 @@ import { addNote, deleteNote, updateNote } from "@/app/actions";
 import { formatDate, plural } from "@/lib/format";
 import { splitWord } from "@/lib/student";
 import { NOTE_KINDS, type Note, type NoteKind } from "@/lib/types";
+import { SubmitButton } from "@/components/submit-button";
 
 
 function KindPicker({ name, value }: { name: string; value: NoteKind }) {
@@ -75,9 +76,9 @@ export function Notebook({ notes, filter, unavailable }: { notes: Note[]; filter
               <textarea name="body" required maxLength={5000} placeholder="Правило, новое слово или мысль, которую хочется запомнить" />
             </label>
             <p className="muted small">Для слова пишите через тире: слово — перевод.</p>
-            <button className="btn primary" type="submit">
+            <SubmitButton className="btn primary" pendingText="Записываю…">
               Записать
-            </button>
+            </SubmitButton>
           </form>
 
           {shown.length ? (
@@ -95,12 +96,12 @@ export function Notebook({ notes, filter, unavailable }: { notes: Note[]; filter
                       <KindPicker name="kind" value={n.kind} />
                       <textarea name="body" required maxLength={5000} defaultValue={n.body} aria-label="Текст записи" />
                       <div className="row">
-                        <button className="btn small primary" type="submit">
+                        <SubmitButton className="btn small primary">
                           Сохранить
-                        </button>
-                        <button className="btn small danger" type="submit" formAction={deleteNote.bind(null, n.id)} formNoValidate>
+                        </SubmitButton>
+                        <SubmitButton className="btn small danger" formAction={deleteNote.bind(null, n.id)} formNoValidate>
                           Удалить
-                        </button>
+                        </SubmitButton>
                       </div>
                     </form>
                   </details>

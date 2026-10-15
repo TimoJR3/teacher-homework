@@ -22,3 +22,8 @@ test("unknown errors fall back to a generic Russian message", () => {
   assert.equal(authErrorText({ message: "Something odd" }, "signin"), "Не получилось войти. Проверьте почту и пароль.");
   assert.match(authErrorText(undefined, "signup"), /^Не получилось зарегистрироваться/);
 });
+
+test("email limit tells to wait an hour, not a minute", () => {
+  const text = authErrorText({ code: "over_email_send_rate_limit", message: "email rate limit exceeded" }, "signup");
+  assert.match(text, /через час/);
+});

@@ -6,6 +6,7 @@ import type { Book } from "@/lib/books";
 import { displayName, formatDate } from "@/lib/format";
 import type { Profile } from "@/lib/types";
 import { ErrorBanner, Header } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 
 // Доски для занятий: новая доска с учеником и список прежних.
 export default async function BoardsPage(props: PageProps<"/teacher/boards">) {
@@ -91,9 +92,9 @@ export default async function BoardsPage(props: PageProps<"/teacher/boards">) {
                   Страница учебника
                   <input type="number" name="page" min={1} placeholder="содержание" />
                 </label>
-                <button className="btn primary" type="submit">
+                <SubmitButton className="btn primary" pendingText="Открываю доску…">
                   Открыть доску
-                </button>
+                </SubmitButton>
                 <p className="small muted">Пришлите ученику ссылку на доску или попросите открыть раздел «Доска».</p>
               </>
             ) : (

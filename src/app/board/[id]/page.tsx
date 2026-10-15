@@ -8,6 +8,8 @@ import { displayName } from "@/lib/format";
 import type { Profile } from "@/lib/types";
 import { Header } from "@/components/ui";
 import { BoardView } from "@/components/board";
+import { SubmitButton } from "@/components/submit-button";
+import { deleteBoard } from "@/app/actions";
 
 // Доска занятия: общая страница для преподавателя и ученика.
 export default async function BoardPage(props: PageProps<"/board/[id]">) {
@@ -44,6 +46,16 @@ export default async function BoardPage(props: PageProps<"/board/[id]">) {
           books={(books ?? []) as Book[]}
           partnerName={isTeacher ? displayName(student as Profile | null) : "Преподаватель"}
         />
+        {isTeacher ? (
+          // Удаляется доска вместе со всем, что на ней нарисовано, поэтому нужна галочка.
+          <form action={deleteBoard.bind(null, board.id)} className="row board-delete">
+            <label className="check small">
+              <input type="checkbox" name="confirm" id="confirm-delete-board" required />
+              точно удалить
+            </label>
+            <SubmitButton className="btn danger small">Удалить доску</SubmitButton>
+          </form>
+        ) : null}
       </main>
     </>
   );

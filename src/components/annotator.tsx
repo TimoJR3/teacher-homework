@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { overlaps, tokenize } from "@/lib/text";
 import type { Mark, Topic } from "@/lib/types";
+import { SubmitButton } from "@/components/submit-button";
 
 type Props = {
   body: string;
@@ -113,9 +114,9 @@ export function Annotator({ body, marks, topics, action }: Props) {
             />
           </label>
           <div className="row">
-            <button className="btn primary" type="submit">
+            <SubmitButton className="btn primary" pendingText="Сохраняю…">
               Добавить пометку
-            </button>
+            </SubmitButton>
             <button className="btn" type="button" onClick={reset}>
               Отмена
             </button>

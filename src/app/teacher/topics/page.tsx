@@ -2,6 +2,7 @@ import { addTopic, deleteTopic, saveTopic } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 import type { Topic } from "@/lib/types";
 import { ErrorBanner, Header } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function TopicsPage(props: PageProps<"/teacher/topics">) {
   const { error } = await props.searchParams;
@@ -51,16 +52,16 @@ export default async function TopicsPage(props: PageProps<"/teacher/topics">) {
                       className="num"
                     />
                   </label>
-                  <button className="btn" type="submit">
+                  <SubmitButton className="btn">
                     Сохранить
-                  </button>
+                  </SubmitButton>
                   <span className="muted small num">{n ? `в пометках: ${n}` : "не используется"}</span>
                 </form>
                 {n === 0 ? (
                   <form action={deleteTopic.bind(null, t.id)}>
-                    <button className="btn danger small" type="submit">
+                    <SubmitButton className="btn danger small">
                       Удалить тему
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>
@@ -83,9 +84,9 @@ export default async function TopicsPage(props: PageProps<"/teacher/topics">) {
               Порядок
               <input type="number" name="sort_order" id="new-topic-order" defaultValue={(list.length + 1) * 10} />
             </label>
-            <button className="btn primary" type="submit">
+            <SubmitButton className="btn primary">
               Добавить
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </main>

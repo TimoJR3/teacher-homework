@@ -25,7 +25,9 @@ export function authErrorText(error: AuthErrorLike, action: "signin" | "signup")
       return "Пароль слишком простой. Возьмите не меньше 8 символов, добавьте цифры.";
     case "email_address_invalid":
       return "Почта указана с ошибкой.";
+    // Бесплатный почтовый сервис Supabase отправляет всего несколько писем в час на весь сайт.
     case "over_email_send_rate_limit":
+      return "Сайт уже отправил слишком много писем за последний час. Попробуйте зарегистрироваться через час.";
     case "over_request_rate_limit":
       return "Слишком частые попытки. Подождите минуту и попробуйте снова.";
     case "signup_disabled":

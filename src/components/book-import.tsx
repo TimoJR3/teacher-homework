@@ -12,6 +12,11 @@ const PAGE_WIDTH = 1400;
 const PARALLEL_UPLOADS = 4;
 const NEW = "__new__";
 
+function sameTitle(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/[\s.,]+/g, " ").trim();
+  return norm(a) === norm(b);
+}
+
 type State =
   | { kind: "idle" }
   | { kind: "busy"; done: number; total: number; note: string }
@@ -21,7 +26,7 @@ type State =
 // Загрузка учебника: браузер сам режет PDF на страницы и кладёт их в закрытое хранилище.
 export function BookImport({ books }: { books: Book[] }) {
   const router = useRouter();
-  const [target, setTarget] = useState(books[0]?.id ?? NEW);
+  const [target, setTarget] = useState(NEW);
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -38,8 +43,10 @@ export function BookImport({ books }: { books: Book[] }) {
       const supabase = createClient();
 
       let book = books.find((b) => b.id === target) ?? null;
+      const name = title.trim() || file.name.replace(/\.pdf$/i, "");
+      // Тот же учебник уже начинали загружать: докачиваем его, а не заводим второй такой же.
+      book ??= books.find((b) => sameTitle(b.title, name) && b.pages === doc.numPages) ?? null;
       if (!book) {
-        const name = title.trim() || file.name.replace(/\.pdf$/i, "");
         const fresh = { id: newBookId(), title: name, pages: doc.numPages, contents_page: 1, pdf_offset: 0 };
         const { error } = await supabase.from("books").insert(fresh);
         if (error) throw new Error(`Учебник не создан: ${error.message}`);

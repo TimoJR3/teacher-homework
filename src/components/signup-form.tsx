@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signUp } from "@/app/actions";
 import { ErrorBanner } from "@/components/ui";
 import type { Role } from "@/lib/types";
+import { SubmitButton } from "@/components/submit-button";
 
 // Регистрация ученика и преподавателя: одна форма, у преподавателя есть поле для кода.
 export function SignupForm({ role, error }: { role: Role; error?: string | string[] }) {
@@ -39,9 +40,9 @@ export function SignupForm({ role, error }: { role: Role; error?: string | strin
             <input type="text" name="teacher_code" id="signup-teacher-code" required autoComplete="off" />
           </label>
         ) : null}
-        <button className="btn primary" type="submit">
+        <SubmitButton className="btn primary" pendingText="Регистрирую…">
           Зарегистрироваться
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="muted small">

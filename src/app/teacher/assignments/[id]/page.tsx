@@ -8,6 +8,7 @@ import { ErrorBanner, Header, StatusPill } from "@/components/ui";
 import { AssignmentForm } from "@/components/assignment-form";
 import { BookPagesForm, loadMaterials, Materials } from "@/components/materials";
 import { MaterialUpload } from "@/components/material-upload";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function AssignmentPage(props: PageProps<"/teacher/assignments/[id]">) {
   const { id } = await props.params;
@@ -114,9 +115,9 @@ export default async function AssignmentPage(props: PageProps<"/teacher/assignme
                 <input type="checkbox" name="confirm" id="confirm-delete" required />
                 точно удалить
               </label>
-              <button className="btn danger" type="submit">
+              <SubmitButton className="btn danger">
                 Удалить задание
-              </button>
+              </SubmitButton>
             </form>
           )}
         </aside>
