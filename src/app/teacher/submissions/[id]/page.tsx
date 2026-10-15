@@ -6,6 +6,7 @@ import { displayName, formatDate } from "@/lib/format";
 import type { Assignment, Mark, Profile, Submission, Topic } from "@/lib/types";
 import { Annotator } from "@/components/annotator";
 import { ErrorBanner, Header, MarkList, MarkedText, StatusPill, TopicStats } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function ReviewPage(props: PageProps<"/teacher/submissions/[id]">) {
   const { id } = await props.params;
@@ -71,9 +72,9 @@ export default async function ReviewPage(props: PageProps<"/teacher/submissions/
                 {m.student_fix ? <span className="fix-given">Исправление ученика: {m.student_fix}</span> : null}
                 {editable ? (
                   <form action={deleteMark.bind(null, sub.id, m.id)}>
-                    <button className="btn danger small" type="submit">
+                    <SubmitButton className="btn danger small">
                       Удалить пометку
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </>
@@ -83,14 +84,14 @@ export default async function ReviewPage(props: PageProps<"/teacher/submissions/
           {editable ? (
             <div className="row">
               <form action={reviewSubmission.bind(null, sub.id, "returned")}>
-                <button className="btn" type="submit" disabled={!ms.length}>
+                <SubmitButton className="btn" disabled={!ms.length}>
                   Вернуть на исправление
-                </button>
+                </SubmitButton>
               </form>
               <form action={reviewSubmission.bind(null, sub.id, "accepted")}>
-                <button className="btn primary" type="submit">
+                <SubmitButton className="btn primary">
                   Принять
-                </button>
+                </SubmitButton>
               </form>
             </div>
           ) : (

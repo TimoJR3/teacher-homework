@@ -40,7 +40,7 @@ export default async function BooksPage(props: PageProps<"/teacher/books">) {
                     {counts[i] >= b.pages
                       ? `${b.pages} ${plural(b.pages, "страница", "страницы", "страниц")}`
                       : counts[i]
-                        ? `загружено ${counts[i]} из ${b.pages}`
+                        ? `загружено ${counts[i]} из ${b.pages}: выберите его справа и загрузите тот же PDF ещё раз`
                         : "страницы ещё не загружены"}
                   </small>
                 </Link>

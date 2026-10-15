@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format";
 import type { Assignment, Mark, Submission, Topic } from "@/lib/types";
 import { ErrorBanner, Header, MarkList, MarkedText, StatusPill } from "@/components/ui";
 import { loadMaterials, Materials } from "@/components/materials";
+import { SubmitButton } from "@/components/submit-button";
 
 const STATUS_HINT = {
   submitted: "Работа отправлена и ждёт проверки.",
@@ -77,9 +78,9 @@ export default async function AssignmentPage(props: PageProps<"/student/assignme
               <textarea name="body" id="submission-body" className="long" required />
             </label>
             <p className="muted small">После отправки текст изменить нельзя, исправления пишутся к пометкам.</p>
-            <button className="btn primary" type="submit">
+            <SubmitButton className="btn primary" pendingText="Отправляю…">
               Сдать работу
-            </button>
+            </SubmitButton>
           </form>
         ) : (
           <>
@@ -98,9 +99,9 @@ export default async function AssignmentPage(props: PageProps<"/student/assignme
                   )}
                 />
                 <div>
-                  <button className="btn primary" type="submit">
+                  <SubmitButton className="btn primary" pendingText="Отправляю…">
                     Отправить исправления
-                  </button>
+                  </SubmitButton>
                 </div>
               </form>
             ) : (

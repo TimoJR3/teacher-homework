@@ -4,6 +4,7 @@ import { addBookPages } from "@/app/actions";
 import { requireRole } from "@/lib/auth";
 import { BOOKS_BUCKET, bookPagePath, type Book } from "@/lib/books";
 import { ErrorBanner, Header } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 
 // Учебник для преподавателя: листать страницы и добавлять нужные в задание.
 export default async function BookPage(props: PageProps<"/teacher/books/[id]">) {
@@ -61,9 +62,9 @@ export default async function BookPage(props: PageProps<"/teacher/books/[id]">) 
                 <span className="visually-hidden">Номер страницы</span>
                 <input type="number" name="p" id="book-page" min={1} max={book.pages} defaultValue={page} />
               </label>
-              <button className="btn" type="submit">
+              <SubmitButton className="btn">
                 Открыть
-              </button>
+              </SubmitButton>
             </form>
             {page < book.pages ? (
               <Link className="btn" href={here(page + 1)} rel="next">
@@ -84,9 +85,9 @@ export default async function BookPage(props: PageProps<"/teacher/books/[id]">) 
               <input type="hidden" name="book_id" value={book.id} />
               <input type="hidden" name="pages" value={page} />
               <input type="hidden" name="back" value={here(page)} />
-              <button className="btn primary" type="submit">
+              <SubmitButton className="btn primary">
                 Добавить страницу {page} в задание
-              </button>
+              </SubmitButton>
               {addedPages.size ? (
                 <span className="small muted">
                   В задании уже: {[...addedPages].sort((x, y) => x - y).join(", ")}

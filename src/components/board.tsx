@@ -197,13 +197,14 @@ export function BoardView({
             return next;
           });
         })
+        // Очищает страницу и листает только преподаватель: такие сообщения от ученика не принимаем.
         .on("broadcast", { event: "clear" }, ({ payload }) => {
-          if (typeof payload?.page !== "number") return;
+          if (isTeacher || typeof payload?.page !== "number") return;
           const k = sheetKey({ book_id: typeof payload.book_id === "string" ? payload.book_id : null, page: payload.page });
           setStrokes((prev) => new Map([...prev].filter(([, s]) => sheetKey(s) !== k)));
         })
         .on("broadcast", { event: "sheet" }, ({ payload }) => {
-          if (typeof payload?.page !== "number") return;
+          if (isTeacher || typeof payload?.page !== "number") return;
           const bookId = typeof payload.book_id === "string" ? payload.book_id : null;
           setSheet({ bookId, page: clampPage(payload.page, MAX_SHEET) });
           setTyping(null);
@@ -233,7 +234,7 @@ export function BoardView({
       channel.current = null;
       if (ch) void supabase.removeChannel(ch);
     };
-  }, [supabase, board.id, me.id, me.name]);
+  }, [supabase, board.id, me.id, me.name, isTeacher]);
 
   // Ученик открывает ту страницу, на которой сейчас преподаватель.
   useEffect(() => {

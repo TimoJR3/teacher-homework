@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { authErrorText } from "@/lib/auth-errors";
@@ -58,10 +59,12 @@ export async function signUp(form: FormData) {
     data.teacher_code = code;
   }
 
+  // Ссылка из письма с подтверждением почты ведёт обратно на этот сайт.
+  const origin = (await headers()).get("origin");
   const { data: result, error } = await supabase.auth.signUp({
     email: str(form, "email"),
     password,
-    options: { data },
+    options: { data, ...(origin ? { emailRedirectTo: `${origin}/auth/confirm` } : {}) },
   });
   if (error) fail(page, authErrorText(error, "signup"));
   if (!result.session) {

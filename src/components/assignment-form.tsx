@@ -1,5 +1,6 @@
 import { displayName, dueInputValue } from "@/lib/format";
 import type { Assignment, Profile } from "@/lib/types";
+import { SubmitButton } from "@/components/submit-button";
 
 // Форма задания: создание на главной и изменение на странице задания.
 export function AssignmentForm({
@@ -78,9 +79,9 @@ export function AssignmentForm({
           <small className="muted">Если никого не отметить, задание получат все ученики.</small>
         </fieldset>
       ) : null}
-      <button className="btn primary" type="submit">
+      <SubmitButton className="btn primary" pendingText="Сохраняю…">
         {assignment ? "Сохранить" : "Создать"}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

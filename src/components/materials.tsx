@@ -4,6 +4,7 @@ import { deleteMaterial, removeBookPage } from "@/app/actions";
 import { BOOKS_BUCKET, bookPagePath, pagesLabel, type AssignmentPage, type Book } from "@/lib/books";
 import { fileSize, isImage, MATERIALS_BUCKET } from "@/lib/materials";
 import type { Material } from "@/lib/types";
+import { SubmitButton } from "@/components/submit-button";
 
 export type MaterialLink = Material & { url: string | null };
 export type PageLink = AssignmentPage & { url: string | null };
@@ -90,9 +91,9 @@ export function Materials({
                   <span className="small">страница {p.page}</span>
                   {editable ? (
                     <form action={removeBookPage.bind(null, assignmentId, book.id, p.page)}>
-                      <button type="submit" className="link-btn small">
+                      <SubmitButton className="link-btn small">
                         убрать
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : null}
                 </div>
@@ -149,9 +150,9 @@ function Thumb({ url, alt }: { url: string | null; alt: string }) {
 function RemoveFile({ assignmentId, id }: { assignmentId: string; id: string }) {
   return (
     <form action={deleteMaterial.bind(null, assignmentId, id)}>
-      <button type="submit" className="link-btn small" title="Убрать файл из задания">
+      <SubmitButton className="link-btn small" title="Убрать файл из задания">
         убрать
-      </button>
+      </SubmitButton>
     </form>
   );
 }
@@ -183,9 +184,9 @@ export function BookPagesForm({
         Страницы
         <input type="text" name="pages" id={`pages-${assignmentId}`} placeholder="14-15" required inputMode="numeric" />
       </label>
-      <button className="btn" type="submit">
+      <SubmitButton className="btn">
         Добавить страницы
-      </button>
+      </SubmitButton>
       <span className="small">
         или{" "}
         {books.map((b, i) => (
